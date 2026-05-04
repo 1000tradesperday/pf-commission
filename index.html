@@ -1553,9 +1553,6 @@ function refreshTot(catId) {
   if (c) c.classList.toggle('has-data', total>0);
   updateGT();
 }
-function calcTotal(deals, hasPct) {
-  return deals.reduce((s,d) => s + (hasPct ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100 : (parseFloat(d.comm)||0)), 0);
-}
 function updateGT() {
   let grand=0; const parts=[];
   CATEGORIES.forEach(cat => {
