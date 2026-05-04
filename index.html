@@ -869,10 +869,10 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
     </div>
 
     <!-- Month filter -->
-    <div class="month-filter" style="margin-bottom:14px">
-      <div class="mf-btn active" onclick="mfSwitch(this,'Mar')">Mar 2026</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Feb')">Feb 2026</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Jan')">Jan 2026</div>
+    <div class="month-filter" style="margin-bottom:14px" id="detail-month-filter">
+      <div class="mf-btn active" onclick="detailMonthSwitch(this,'Mar')">Mar 2026</div>
+      <div class="mf-btn" onclick="detailMonthSwitch(this,'Feb')">Feb 2026</div>
+      <div class="mf-btn" onclick="detailMonthSwitch(this,'Jan')">Jan 2026</div>
     </div>
 
     <!-- Co tabs -->
@@ -885,17 +885,20 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
 
 <!-- DOWNLOAD MODAL -->
 <div class="modal-overlay" id="download-options-modal">
-  <div class="modal">
-    <div class="modal-title">⬇ Download Commission Data</div>
-    <div class="modal-sub">Choose what to download as .xlsx</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      <button class="btn btn-ghost" style="justify-content:flex-start;padding:12px 16px" onclick="downloadAll('month'); closeModal('download-options-modal')">
-        📅 All employees — current month (<span id="dl-month-label">Mar 2026</span>)
-      </button>
-      <button class="btn btn-ghost" style="justify-content:flex-start;padding:12px 16px" onclick="downloadAll('year'); closeModal('download-options-modal')">
-        📆 All employees — entire year (2026)
-      </button>
+  <div class="modal" style="width:500px">
+    <div class="modal-title">⬇ Download CT Forms</div>
+    <div class="modal-sub">Select employees to download. Each employee gets one xlsx with all months.</div>
+
+    <div id="dl-emp-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:280px;overflow-y:auto"></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-ghost btn-sm" onclick="dlSelectAll(true)">Select All</button>
+      <button class="btn btn-ghost btn-sm" onclick="dlSelectAll(false)">Clear</button>
     </div>
+
+    <div id="dl-status" style="display:none;font-size:12px;color:var(--amber);padding:8px 0">⏳ Generating CT Forms... please wait</div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="downloadSelected()">⬇ Download Selected</button>
     <button class="modal-close" onclick="closeModal('download-options-modal')">Cancel</button>
   </div>
 </div>
@@ -1102,16 +1105,41 @@ function showDownloadModal() {
   document.getElementById('dl-month-label').textContent = monthLabel;
   document.getElementById('download-options-modal').classList.add('open');
 }
+function detailMonthSwitch(el, month) {
+  document.querySelectorAll('#detail-month-filter .mf-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentDetailMonth = month;
+}
+
 function openDetail(name) {
   const emp = settingsEmps.find(e => e.name === name) || { name, email:'', cos:['SWS','SWG','BE'] };
   currentDetailEmp = emp;
-  currentDetailMonth = empMonth;
 
   document.getElementById('detail-name').textContent = name;
-  document.getElementById('detail-avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2);
-  document.getElementById('detail-meta').textContent = (emp.email||'') + ' · ' + empMonth + ' ' + empYear;
+  document.getElementById('detail-avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('detail-meta').textContent = (emp.email||'') + ' · ' + empYear;
   document.getElementById('detail-co-tags').innerHTML =
     (emp.cos||['SWS','SWG','BE']).map(c => `<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
+
+  // Build month filter from available data
+  const allData = getAllDataForDownload();
+  const empMonths = [...new Set(allData.filter(d=>d.name===name).map(d=>d.month))];
+  const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const sorted = MONTH_ORDER.filter(m => empMonths.includes(m));
+  const filterEl = document.getElementById('detail-month-filter');
+  if (sorted.length > 0) {
+    currentDetailMonth = sorted[sorted.length-1];
+    filterEl.innerHTML = sorted.reverse().map((m,i) =>
+      `<div class="mf-btn${i===0?' active':''}" onclick="detailMonthSwitch(this,'${m}')">${m} ${empYear}</div>`
+    ).join('');
+  } else {
+    currentDetailMonth = 'Mar';
+    filterEl.innerHTML = `<div class="mf-btn active" onclick="detailMonthSwitch(this,'Mar')">Mar ${empYear}</div>`;
+  }
+
+  // Total commission
+  const total = allData.filter(d=>d.name===name).reduce((s,d)=>s+(parseFloat(d.comm)||0),0);
+  document.getElementById('detail-total').textContent = '$'+total.toFixed(2);
 
   renderDetailCo(emp.cos||['SWS','SWG','BE'], (emp.cos||['SWS'])[0]);
   showPage('page-detail');
@@ -1552,60 +1580,128 @@ function getAllDataForDownload() {
   return allData;
 }
 
-function downloadAll(scope) {
-  const allData = getAllDataForDownload();
-  let filtered = allData;
-  let filename = `PF_Commission_All_2026.xlsx`;
-  if (scope === 'month' && adminSelectedMonth !== 'All') {
-    filtered = allData.filter(d => d.month === adminSelectedMonth);
-    filename = `PF_Commission_${adminSelectedMonth}${empYear}.xlsx`;
-  }
-  if (!filtered.length) { alert('No data for selected period.'); return; }
-  // Build one xlsx with one sheet per employee per month
-  const wb = XLSX.utils.book_new();
-  const byEmp = {};
-  filtered.forEach(d => { if(!byEmp[d.name]) byEmp[d.name]={}; if(!byEmp[d.name][d.month]) byEmp[d.name][d.month]=[]; byEmp[d.name][d.month].push(d); });
-  Object.entries(byEmp).forEach(([name, months]) => {
-    Object.entries(months).forEach(([month, data]) => {
-      const sheetName = (name.split(' ')[0]+'_'+month).slice(0,31);
-      XLSX.utils.book_append_sheet(wb, buildCTFormSheet(name, data, month), sheetName);
-    });
-  });
-  XLSX.writeFile(wb, filename);
-}
-
+// ── Download Modal ──
 function showDownloadModal() {
-  const label = adminSelectedMonth === 'All' ? 'All Months' : adminSelectedMonth + ' ' + empYear;
-  document.getElementById('dl-month-label').textContent = label;
+  // Render employee checkboxes
+  const list = document.getElementById('dl-emp-list');
+  list.innerHTML = settingsEmps.map((emp, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;user-select:none" onclick="dlToggle(${i},this)">
+      <div style="width:18px;height:18px;border:2px solid var(--blue);border-radius:4px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#fff;font-weight:700" id="dl-check-${i}">✓</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">${emp.name}</div>
+        <div style="font-size:11px;color:var(--ink3)">${emp.email}</div>
+      </div>
+    </label>`).join('');
+  document.getElementById('dl-status').style.display = 'none';
   document.getElementById('download-options-modal').classList.add('open');
 }
 
+let dlSelected = new Set();
+function dlToggle(i, el) {
+  const check = document.getElementById('dl-check-'+i);
+  if (dlSelected.has(i)) {
+    dlSelected.delete(i);
+    check.style.background = 'transparent';
+    check.style.color = 'transparent';
+    el.style.borderColor = 'var(--line)';
+  } else {
+    dlSelected.add(i);
+    check.style.background = 'var(--blue)';
+    check.style.color = '#fff';
+    el.style.borderColor = 'var(--blue)';
+  }
+}
+function dlSelectAll(select) {
+  settingsEmps.forEach((_, i) => {
+    const check = document.getElementById('dl-check-'+i);
+    const label = check?.closest('label');
+    if (select) { dlSelected.add(i); if(check){check.style.background='var(--blue)';check.style.color='#fff';} if(label) label.style.borderColor='var(--blue)'; }
+    else { dlSelected.delete(i); if(check){check.style.background='transparent';check.style.color='transparent';} if(label) label.style.borderColor='var(--line)'; }
+  });
+}
+
+async function downloadSelected() {
+  if (dlSelected.size === 0) { alert('Please select at least one employee.'); return; }
+  const statusEl = document.getElementById('dl-status');
+  statusEl.style.display = 'block';
+
+  const allData = getAllDataForDownload();
+  const selected = [...dlSelected].map(i => settingsEmps[i]);
+
+  // Download one by one
+  for (const emp of selected) {
+    statusEl.textContent = `⏳ Generating ${emp.name}...`;
+    const subs = allData.filter(d => d.name === emp.name);
+    await generateAndDownloadCTForm(emp.name, emp.email, subs);
+    await new Promise(r => setTimeout(r, 1000)); // small delay between downloads
+  }
+
+  statusEl.textContent = '✓ All done!';
+  statusEl.style.color = 'var(--green)';
+  setTimeout(() => { closeModal('download-options-modal'); statusEl.style.color='var(--amber)'; dlSelected.clear(); }, 1500);
+}
+
+async function generateAndDownloadCTForm(empName, empEmail, subs) {
+  try {
+    const result = await apiPost({
+      action: 'generateCTForm',
+      requestEmail: currentUser.email,
+      data: { empName, empEmail, year: empYear, submissions: subs }
+    });
+    if (result.downloadUrl) {
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = result.downloadUrl;
+      a.download = empName.replace(/ /g,'_') + '_CT_' + empYear + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      alert('Error generating CT Form for ' + empName + ': ' + (result.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── Individual employee download ──
 let currentDetailEmp = null;
 let currentDetailMonth = 'Mar';
 
-function downloadOneMonth() {
+async function downloadOneMonth() {
   if (!currentDetailEmp) return;
   const allData = getAllDataForDownload();
-  const filtered = allData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
-  if (!filtered.length) { alert('No data for this employee this month.'); return; }
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, filtered, currentDetailMonth), currentDetailMonth);
-  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
+  const subs = allData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
+  if (!subs.length) { alert('No data for this employee this month.'); return; }
+
+  const btn = event.target;
+  btn.textContent = '⏳...';
+  btn.disabled = true;
+
+  await generateAndDownloadCTForm(currentDetailEmp.name, currentDetailEmp.email, subs);
+
+  btn.textContent = '⬇ This Month';
+  btn.disabled = false;
 }
 
-function downloadOneAll() {
+async function downloadOneAll() {
   if (!currentDetailEmp) return;
   const allData = getAllDataForDownload();
-  const filtered = allData.filter(d => d.name === currentDetailEmp.name);
-  if (!filtered.length) { alert('No data for this employee.'); return; }
-  const wb = XLSX.utils.book_new();
-  const byMonth = {};
-  filtered.forEach(d => { if(!byMonth[d.month]) byMonth[d.month]=[]; byMonth[d.month].push(d); });
-  Object.entries(byMonth).forEach(([month, data]) => {
-    XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, data, month), month+' '+empYear);
-  });
-  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_All2026.xlsx`);
+  const subs = allData.filter(d => d.name === currentDetailEmp.name);
+  if (!subs.length) { alert('No data for this employee.'); return; }
+
+  const btn = event.target;
+  btn.textContent = '⏳...';
+  btn.disabled = true;
+
+  await generateAndDownloadCTForm(currentDetailEmp.name, currentDetailEmp.email, subs);
+
+  btn.textContent = '⬇ All Months';
+  btn.disabled = false;
 }
+
+function showDownloadModal_unused() {} // kept for reference
+function downloadAll(scope) {} // kept for reference
 
 // ══════════════════════════════════════════
 // BUILD CT FORM FORMAT WORKSHEET
