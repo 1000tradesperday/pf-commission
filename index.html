@@ -1643,16 +1643,16 @@ async function downloadSelected() {
 
 async function generateAndDownloadCTForm(empName, empEmail, subs) {
   try {
-    const result = await apiPost({
+    const result = await apiCall({
       action: 'generateCTForm',
-      requestEmail: currentUser.email,
-      data: { empName, empEmail, year: empYear, submissions: subs }
+      empName: empName,
+      year: empYear,
+      requestEmail: currentUser.email
     });
     if (result.downloadUrl) {
-      // Trigger download
       const a = document.createElement('a');
       a.href = result.downloadUrl;
-      a.download = empName.replace(/ /g,'_') + '_CT_' + empYear + '.xlsx';
+      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
