@@ -1109,6 +1109,9 @@ function detailMonthSwitch(el, month) {
   document.querySelectorAll('#detail-month-filter .mf-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   currentDetailMonth = month;
+  // Re-render the active company tab
+  const activeCo = document.querySelector('.detail-co-tab.active');
+  if (activeCo) renderDetailData(activeCo.textContent.trim());
 }
 
 function openDetail(name) {
@@ -1159,38 +1162,32 @@ function selectDetailCo(el, co, cosStr) {
 }
 
 // Sample detail data
-const SAMPLE_DETAIL = {
-  SWS: {
-    'New Sales':        [{ invoice:'66914', date:'2026-03-07', amount:4988, pct:5, comm:249.40 }],
-    'Selection Fitting':[{ invoice:'88225', date:'2026-03-10', amount:'', pct:'', comm:30 },
-                         { invoice:'88234', date:'2026-03-12', amount:'', pct:'', comm:30 },
-                         { invoice:'66706', date:'2026-03-15', amount:'', pct:'', comm:20 }],
-    'Car Decor':        [{ invoice:'88352', date:'2026-03-18', amount:'', pct:'', comm:15 },
-                         { invoice:'88053', date:'2026-03-20', amount:'', pct:'', comm:15 }],
-  },
-  SWG: {
-    'New Sales':        [{ invoice:'99010', date:'2026-03-14', amount:4988, pct:4, comm:199.52 },
-                         { invoice:'99011', date:'2026-03-15', amount:4988, pct:5, comm:249.40 },
-                         { invoice:'99012', date:'2026-03-22', amount:8888, pct:2, comm:177.76 }],
-  },
-  BE: {
-    'New Sales':        [{ invoice:'88572', date:'2026-03-16', amount:2088, pct:2.5, comm:52.20 },
-                         { invoice:'88597', date:'2026-03-29', amount:3688, pct:5, comm:184.40 }],
-    'UpSales':          [{ invoice:'88580', date:'2026-03-18', amount:250, pct:5, comm:12.50 },
-                         { invoice:'88585', date:'2026-03-20', amount:600, pct:5, comm:30 }],
-    'Review':           [{ invoice:'', date:'2026-03-25', amount:'', pct:'', comm:5 }],
-  }
-};
-
 function renderDetailData(co) {
-  const data = SAMPLE_DETAIL[co] || {};
+  if (!currentDetailEmp) return;
+
+  // Build data from IMPORTED_DATA + adminData for this employee/month/company
+  const allData = getAllDataForDownload();
+  const filtered = allData.filter(d =>
+    d.name === currentDetailEmp.name &&
+    d.month === currentDetailMonth &&
+    d.company === co
+  );
+
+  // Group by category
+  const byCat = {};
+  filtered.forEach(d => {
+    if (!byCat[d.category]) byCat[d.category] = [];
+    byCat[d.category].push(d);
+  });
+
   let html = '';
   let coTotal = 0;
   CATEGORIES.forEach(cat => {
-    const deals = data[cat.id] || [];
+    const deals = byCat[cat.id] || [];
     if (!deals.length) return;
     const catTotal = deals.reduce((s,d) => s + (parseFloat(d.comm)||0), 0);
     coTotal += catTotal;
+    const hasPct = cat.hasPct === true || cat.hasPct === 'mixed';
     html += `<div class="detail-cat-block">
       <div class="detail-cat-head">
         <div class="detail-cat-name">${cat.icon} ${cat.id}</div>
@@ -1199,7 +1196,7 @@ function renderDetailData(co) {
       <table class="detail-table">
         <thead><tr>
           <th>#</th><th>Invoice</th><th>Date</th><th>Amount</th>
-          ${cat.hasPct ? '<th>%</th>' : ''}
+          ${hasPct ? '<th>%</th>' : ''}
           <th>Comm</th>
         </tr></thead>
         <tbody>
@@ -1208,18 +1205,19 @@ function renderDetailData(co) {
             <td style="font-family:'DM Mono',monospace;font-size:12px">${d.invoice||'—'}</td>
             <td style="color:var(--ink3)">${d.date||'—'}</td>
             <td style="font-family:'DM Mono',monospace;text-align:right">${d.amount?'$'+Number(d.amount).toLocaleString():'—'}</td>
-            ${cat.hasPct ? `<td style="text-align:right;color:var(--ink3)">${d.pct||''}%</td>` : ''}
-            <td class="comm-val">$${parseFloat(d.comm).toFixed(2)}</td>
+            ${hasPct ? `<td style="text-align:right;color:var(--ink3)">${d.pct?d.pct+'%':'—'}</td>` : ''}
+            <td class="comm-val">$${parseFloat(d.comm||0).toFixed(2)}</td>
           </tr>`).join('')}
         </tbody>
       </table>
     </div>`;
   });
-  document.getElementById('detail-data').innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--ink3)">No data submitted yet</div>';
+
+  document.getElementById('detail-data').innerHTML = html ||
+    '<div style="padding:24px;text-align:center;color:var(--ink3)">No data for this month</div>';
 }
 
-function downloadOne() { alert('Will download .xlsx for this employee — connect Google Sheet backend to enable.'); }
-function downloadAll()  { alert('Will download .xlsx for all submitted employees — connect Google Sheet backend to enable.'); }
+
 
 // ══════════════════════════════════════════
 // SAVE / LOAD — Google Sheet
@@ -1227,13 +1225,15 @@ function downloadAll()  { alert('Will download .xlsx for all submitted employees
 async function loadFromSheet() {
   showSaveStatus('loading');
   
-  // First load imported historical data
+  // Step 1: Start with IMPORTED_DATA (historical data) as base
   const imported = IMPORTED_DATA[currentUser.email];
   if (imported) {
     empState = JSON.parse(JSON.stringify(imported)); // deep copy
+  } else {
+    empState = {};
   }
-  
-  // Then overlay with any newer data from Google Sheet
+
+  // Step 2: Overlay with Google Sheet data for current month
   try {
     const result = await apiCall({
       action: 'loadData',
@@ -1241,20 +1241,16 @@ async function loadFromSheet() {
       month: empMonth,
       year: empYear
     });
-    if (result.data && Object.keys(result.data).length > 0) {
+    // Only use Sheet data if it has content AND it's not a month already in IMPORTED_DATA
+    const importedHasMonth = imported?.[empYear]?.[empMonth];
+    if (result.data && Object.keys(result.data).length > 0 && !importedHasMonth) {
       if (!empState[empYear]) empState[empYear] = {};
       empState[empYear][empMonth] = result.data;
     }
   } catch(e) {
-    // fallback: also check localStorage
-    try {
-      const local = JSON.parse(localStorage.getItem('pf_ct_'+currentUser.email)||'{}');
-      if (local[empYear]?.[empMonth]) {
-        if (!empState[empYear]) empState[empYear] = {};
-        empState[empYear][empMonth] = local[empYear][empMonth];
-      }
-    } catch(e2){}
+    // No fallback to localStorage — localStorage may have old incorrect data
   }
+
   showSaveStatus('saved');
   renderEmp();
 }
