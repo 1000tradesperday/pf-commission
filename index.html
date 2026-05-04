@@ -473,7 +473,7 @@ input[type="number"],input[type="date"] { text-align:right; font-family:'DM Mono
 input:focus { border-color:var(--blue); background:var(--blue-bg); }
 input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
 
-.comm-auto {
+.ro-cell { font-size:12.5px; color:var(--ink2); padding:0 4px; }
   font-family:'DM Mono',monospace; font-size:12px; font-weight:500;
   color:var(--green); background:var(--green-bg); border:1px solid var(--green-border);
   border-radius:var(--radius); padding:6px 8px; text-align:right;
@@ -650,7 +650,11 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
     </div>
 
     <div class="co-tabs" id="emp-co-tabs"></div>
-    <div id="emp-cat-list"></div>
+    <div id="emp-readonly-banner" style="display:none;background:#FFF8E1;border:1px solid #FFD54F;border-radius:var(--radius);padding:10px 16px;margin-bottom:12px;font-size:12.5px;color:#F57F17">
+    🔒 This month's data is imported and locked. Switch to a future month to enter new deals.
+  </div>
+
+  <div id="emp-cat-list"></div>
 
     <div class="grand-total">
       <div>
@@ -922,17 +926,14 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
 
 <script>
 // ══════════════════════════════════════════
-// CONFIG — REAL BACKEND
+// CONFIG
 // ══════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '1029278072176-si1td96nr5shimotvsplgonsfsjnam8j.apps.googleusercontent.com';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzp4iBr15n1sWxdV82HHnrhVzOlYu8bWklA9nixwZPFVeBk08_jhPepcLR0iIMq8jGl/exec';
 const ADMIN_EMAIL = '1000tradesperday@gmail.com';
 
-// ══════════════════════════════════════════
-// DATA
-// ══════════════════════════════════════════
 const CATEGORIES = [
-  { id:'New Sales',         icon:'💰', rule:'Normal: 5% of revenue · AD deal: $250 fixed · max 2 pax · min 50% deposit', hasPct:'mixed' },
+  { id:'New Sales',         icon:'💰', rule:'Normal: 5% · AD/PG Job: fixed · max 2 pax · min 50% deposit', hasPct:'mixed' },
   { id:'RSVP',              icon:'📋', rule:'1% for RSVP', hasPct:true },
   { id:'UpSales',           icon:'📈', rule:'5% of revenue · max 2 pax share', hasPct:true },
   { id:'Selection Fitting', icon:'👗', rule:'PWS $20 · AD $30 · 1st fitting only', hasPct:false },
@@ -942,66 +943,46 @@ const CATEGORIES = [
   { id:'Online Sales',      icon:'🛍️', rule:'Nubra $15 · Shirt $20 · Robe $25 · Shoes $30', hasPct:false },
 ];
 
-let currentUser = null;  // { name, email, companies, isAdmin }
-let empState = {};
-let empCo = 'SWS';
-let empMonth = 'Mar';
-let empYear = '2026';
-let saveTimer = null;
-let adminData = [];  // cached submissions for admin
+// Months that are imported (read-only for employees)
+const IMPORTED_MONTHS = ['Jan','Feb','Mar'];
+
+const IMPORTED_DATA = {"sw999.ba@gmail.com":{"2026":{"Feb":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"800.4"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"85.0"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"140.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]}},"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"249.4"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"67.5"}]},"SWG":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"626.68"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"995.13"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"147.5"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"}]}}}},"sw999.sales@gmail.com":{"2026":{"Feb":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"31.76"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"120.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"7.5"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"484.28"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"82.55"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"260.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"168.8"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"792.49"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"210.7"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"170.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"84.4"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"105.0"}]}}}},"sw999.pg1@gmail.com":{"2026":{"Feb":{"SWS":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"183.8"}]}},"Mar":{"BE":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"106.9"}]}}}},"sw999.pg2@gmail.com":{"2026":{"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"194.4"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"250.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]}}}}};
 
 // ══════════════════════════════════════════
-// GOOGLE OAUTH (real)
+// STATE
+// ══════════════════════════════════════════
+let currentUser = null;
+let empState    = {};
+let empCo       = 'SWS';
+let empMonth    = 'Mar';
+let empYear     = '2026';
+let saveTimer   = null;
+let adminData   = [];
+let settingsEmps        = [];
+let adminSelectedMonth  = 'All';
+let currentDetailEmp    = null;
+let currentDetailMonth  = 'Mar';
+let dlSelected          = new Set();
+
+// ══════════════════════════════════════════
+// AUTH
 // ══════════════════════════════════════════
 function initGoogleAuth() {
-  if (typeof google === 'undefined' || !google.accounts) {
-    setTimeout(initGoogleAuth, 500);
-    return;
-  }
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleGoogleLogin,
-    auto_select: false,
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('google-btn-container'),
-    { theme:'outline', size:'large', width:252, text:'continue_with' }
-  );
+  if (typeof google === 'undefined' || !google.accounts) { setTimeout(initGoogleAuth, 500); return; }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleLogin, auto_select: false });
+  google.accounts.id.renderButton(document.getElementById('google-btn-container'), { theme:'outline', size:'large', width:252, text:'continue_with' });
 }
 
 async function handleGoogleLogin(response) {
   showLoginLoading(true);
   try {
-    // Decode JWT to get email
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const email = payload.email;
-
-    // Check against Google Sheet Employees tab
-    const result = await apiCall({ action:'getEmployee', email });
-
-    if (!result.found) {
-      showLoginError('Your account is not registered. Please contact Andy.');
-      showLoginLoading(false);
-      return;
-    }
-
-    currentUser = {
-      name: result.name,
-      email: email,
-      companies: result.companies || [],
-      isAdmin: result.isAdmin || email.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
-      initials: result.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-    };
-
-    if (currentUser.isAdmin) {
-      enterAdmin();
-    } else {
-      enterEmployee();
-    }
-  } catch(e) {
-    showLoginError('Login failed. Please try again.');
-    showLoginLoading(false);
-  }
+    const email   = payload.email;
+    const result  = await apiCall({ action:'getEmployee', email });
+    if (!result.found) { showLoginError('Your account is not registered. Contact Andy.'); showLoginLoading(false); return; }
+    currentUser = { name: result.name, email, companies: result.companies||[], isAdmin: result.isAdmin||email.toLowerCase()===ADMIN_EMAIL.toLowerCase(), initials: result.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() };
+    result.isAdmin ? enterAdmin() : enterEmployee();
+  } catch(e) { showLoginError('Login failed. Please try again.'); showLoginLoading(false); }
 }
 
 function showLoginLoading(on) {
@@ -1010,326 +991,123 @@ function showLoginLoading(on) {
 }
 function showLoginError(msg) {
   const el = document.getElementById('login-error');
-  el.textContent = msg;
-  el.style.display = 'block';
+  el.textContent = msg; el.style.display = 'block';
 }
-
-// Preview login (demo only — remove when deploying for real)
 function loginAs(who) {
   if (who === 'admin') {
-    currentUser = { name:'Andy', email:ADMIN_EMAIL, companies:[], isAdmin:true, initials:'A' };
+    currentUser = { name:'Admin', email:ADMIN_EMAIL, companies:[], isAdmin:true, initials:'A' };
     enterAdmin();
   } else {
-    currentUser = { name:'Chu Hong', email:'sw999.ba@gmail.com', companies:['SWS','SWG','BE'], isAdmin:false, initials:'CH' };
+    currentUser = { name:'Ng Chu Hong', email:'sw999.ba@gmail.com', companies:['SWS','SWG','BE'], isAdmin:false, initials:'NC' };
     enterEmployee();
   }
 }
-
-function enterEmployee() {
-  empCo = currentUser.companies[0] || 'SWS';
-  document.getElementById('emp-avatar').textContent = currentUser.initials;
-  document.getElementById('emp-name-display').textContent = currentUser.name;
-  document.getElementById('sub-emp').textContent = currentUser.name;
-  loadFromSheet();
-  showPage('page-employee');
-}
-
-function enterAdmin() {
-  // Set admin name from currentUser
-  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('admin-avatar').textContent = initials;
-  document.getElementById('admin-name-display').textContent = currentUser.name;
-  showPage('page-admin');
-  loadAdminDashboard();
-}
-
-function selectSystem(sys) {
-  // placeholder for future HR system routing
-}
-
 function logout() {
-  google.accounts.id.disableAutoSelect();
-  currentUser = null;
-  empState = {};
-  showPage('page-login');
-  showLoginLoading(false);
+  try { google.accounts.id.disableAutoSelect(); } catch(e) {}
+  currentUser = null; empState = {};
+  showPage('page-login'); showLoginLoading(false);
   document.getElementById('login-error').style.display = 'none';
 }
+function selectSystem() {}
 
 // ══════════════════════════════════════════
-// API HELPER
-// ══════════════════════════════════════════
-async function apiCall(params) {
-  const url = new URL(SCRIPT_URL);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v));
-  const res = await fetch(url.toString());
-  return res.json();
-}
-
-async function apiPost(params) {
-  const url = new URL(SCRIPT_URL);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v));
-  const res = await fetch(url.toString(), { method:'POST' });
-  return res.json();
-}
-
-// ══════════════════════════════════════════
-// PAGE ROUTING
+// NAVIGATION
 // ══════════════════════════════════════════
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+function enterEmployee() {
+  empCo    = currentUser.companies[0] || 'SWS';
+  empMonth = 'Mar';
+  document.getElementById('emp-avatar').textContent       = currentUser.initials;
+  document.getElementById('emp-name-display').textContent = currentUser.name;
+  document.getElementById('sub-emp').textContent          = currentUser.name;
+  loadFromSheet();
+  showPage('page-employee');
+}
+function enterAdmin() {
+  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('admin-avatar').textContent       = initials;
+  document.getElementById('admin-name-display').textContent = currentUser.name;
+  showPage('page-admin');
+  loadAdminDashboard();
+}
 function adminTab(el, tab) {
   document.querySelectorAll('.admin-nav-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('admin-dashboard').style.display = tab==='dashboard' ? '' : 'none';
-  document.getElementById('admin-settings').style.display  = tab==='settings'  ? '' : 'none';
+  document.getElementById('admin-dashboard').style.display = tab==='dashboard' ? 'block' : 'none';
+  document.getElementById('admin-settings').style.display  = tab==='settings'   ? 'block' : 'none';
+  if (tab === 'settings') renderSettings();
 }
-let adminSelectedMonth = 'All';
-
-function adminMfSwitch(el, month) {
-  el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  adminSelectedMonth = month;
-  renderAdminDashboard();
-}
-
-function mfSwitch(el, month) {
-  el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function showDownloadModal() {
-  const monthLabel = adminSelectedMonth === 'All' ? 'All Months' : adminSelectedMonth + ' ' + empYear;
-  document.getElementById('dl-month-label').textContent = monthLabel;
-  document.getElementById('download-options-modal').classList.add('open');
-}
-function detailMonthSwitch(el, month) {
-  document.querySelectorAll('#detail-month-filter .mf-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  currentDetailMonth = month;
-  // Re-render the active company tab
-  const activeCo = document.querySelector('.detail-co-tab.active');
-  if (activeCo) renderDetailData(activeCo.textContent.trim());
-}
-
-function openDetail(name) {
-  const emp = settingsEmps.find(e => e.name === name) || { name, email:'', cos:['SWS','SWG','BE'] };
-  currentDetailEmp = emp;
-
-  document.getElementById('detail-name').textContent = name;
-  document.getElementById('detail-avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('detail-meta').textContent = (emp.email||'') + ' · ' + empYear;
-  document.getElementById('detail-co-tags').innerHTML =
-    (emp.cos||['SWS','SWG','BE']).map(c => `<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
-
-  // Build month filter from available data
-  const allData = getAllDataForDownload();
-  const empMonths = [...new Set(allData.filter(d=>d.name===name).map(d=>d.month))];
-  const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const sorted = MONTH_ORDER.filter(m => empMonths.includes(m));
-  const filterEl = document.getElementById('detail-month-filter');
-  if (sorted.length > 0) {
-    currentDetailMonth = sorted[sorted.length-1];
-    filterEl.innerHTML = sorted.reverse().map((m,i) =>
-      `<div class="mf-btn${i===0?' active':''}" onclick="detailMonthSwitch(this,'${m}')">${m} ${empYear}</div>`
-    ).join('');
-  } else {
-    currentDetailMonth = 'Mar';
-    filterEl.innerHTML = `<div class="mf-btn active" onclick="detailMonthSwitch(this,'Mar')">Mar ${empYear}</div>`;
-  }
-
-  // Total commission
-  const total = allData.filter(d=>d.name===name).reduce((s,d)=>s+(parseFloat(d.comm)||0),0);
-  document.getElementById('detail-total').textContent = '$'+total.toFixed(2);
-
-  renderDetailCo(emp.cos||['SWS','SWG','BE'], (emp.cos||['SWS'])[0]);
-  showPage('page-detail');
-}
-function backToDashboard() { showPage('page-admin'); }
-
-function renderDetailCo(cos, activeCo) {
-  document.getElementById('detail-co-tabs').innerHTML = cos.map(c =>
-    `<div class="detail-co-tab${c===activeCo?' active':''}" onclick="selectDetailCo(this,'${c}','${cos.join(',')}')">${c}</div>`
-  ).join('');
-  renderDetailData(activeCo);
-}
-function selectDetailCo(el, co, cosStr) {
-  document.querySelectorAll('.detail-co-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  renderDetailData(co);
-}
-
-// Sample detail data
-function renderDetailData(co) {
-  if (!currentDetailEmp) return;
-
-  const allData = getAllDataForDownload();
-  const filtered = allData.filter(d =>
-    d.name === currentDetailEmp.name &&
-    d.month === currentDetailMonth &&
-    d.company === co
-  );
-
-  // Group by category
-  const byCat = {};
-  filtered.forEach(d => {
-    if (!byCat[d.category]) byCat[d.category] = [];
-    byCat[d.category].push(d);
-  });
-
-  let html = '';
-  let coTotal = 0;
-
-  CATEGORIES.forEach(cat => {
-    const deals = byCat[cat.id] || [];
-    const hasPct = cat.hasPct === true || cat.hasPct === 'mixed';
-    const catTotal = deals.reduce((s,d) => {
-      const amt = parseFloat(d.amount)||0;
-      const pct = parseFloat(d.pct)||0;
-      if (hasPct && amt > 0 && pct > 0) return s + amt * pct / 100;
-      return s + (parseFloat(d.comm)||0);
-    }, 0);
-    coTotal += catTotal;
-
-    const colHead = hasPct
-      ? `<span>#</span><span>Invoice</span><span>Date</span><span>Amount</span><span>%</span><span>Comm</span>`
-      : `<span>#</span><span>Invoice</span><span>Date</span><span>Amount</span><span>Comm</span>`;
-
-    const rowsHtml = deals.map((d,i) => {
-      const amt = parseFloat(d.amount)||0;
-      const pct = parseFloat(d.pct)||0;
-      const comm = (hasPct && amt > 0 && pct > 0) ? amt*pct/100 : (parseFloat(d.comm)||0);
-      if (hasPct) {
-        return `<tr>
-          <td style="color:var(--ink3);width:30px">${i+1}</td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px">${d.invoice||'—'}</td>
-          <td style="color:var(--ink3)">${d.date||'—'}</td>
-          <td style="text-align:right">${amt?'$'+amt.toLocaleString():'—'}</td>
-          <td style="text-align:right;color:var(--ink3)">${pct?pct+'%':'—'}</td>
-          <td class="comm-val">$${comm.toFixed(2)}</td>
-        </tr>`;
-      } else {
-        return `<tr>
-          <td style="color:var(--ink3);width:30px">${i+1}</td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px">${d.invoice||'—'}</td>
-          <td style="color:var(--ink3)">${d.date||'—'}</td>
-          <td style="text-align:right">${amt?'$'+amt.toLocaleString():'—'}</td>
-          <td class="comm-val">$${comm.toFixed(2)}</td>
-        </tr>`;
-      }
-    }).join('');
-
-    html += `<div class="cat-card${catTotal>0?' has-data':''}" style="margin-bottom:10px">
-      <div class="cat-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.chevron').classList.toggle('open')">
-        <div class="cat-header-left">
-          <div class="cat-icon">${cat.icon}</div>
-          <div>
-            <div class="cat-name">${cat.id}</div>
-            <div class="cat-rule" style="font-size:11px;color:var(--ink3)">${cat.rule}</div>
-          </div>
-        </div>
-        <div class="cat-header-right">
-          <span class="cat-deals">${deals.length} deal${deals.length!==1?'s':''}</span>
-          <span class="cat-sum${catTotal===0?' zero':''}" >$${catTotal.toFixed(2)}</span>
-          <span class="chevron${catTotal>0?' open':''}">▼</span>
-        </div>
-      </div>
-      <div class="cat-body${catTotal>0?' open':''}">
-        ${deals.length > 0 ? `
-        <div class="col-head ${hasPct?'layout-pct':'layout-nopct'}" style="font-size:10px">${colHead}</div>
-        <table class="detail-table" style="width:100%">
-          <tbody>${rowsHtml}</tbody>
-        </table>
-        <div class="cat-footer">
-          <span class="cat-footer-label">Total Comm</span>
-          <span class="cat-footer-val">$${catTotal.toFixed(2)}</span>
-        </div>` : '<div style="padding:12px 16px;font-size:12px;color:var(--ink3)">No deals this month</div>'}
-      </div>
-    </div>`;
-  });
-
-  // Update total
-  document.getElementById('detail-total').textContent = '$' + allData
-    .filter(d => d.name === currentDetailEmp.name)
-    .reduce((s,d) => s + (parseFloat(d.comm)||0), 0).toFixed(2);
-
-  document.getElementById('detail-data').innerHTML = html ||
-    '<div style="padding:24px;text-align:center;color:var(--ink3)">No data for this month</div>';
-}
-
-
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 // ══════════════════════════════════════════
-// SAVE / LOAD — Google Sheet
+// API
 // ══════════════════════════════════════════
+async function apiCall(params) {
+  const url = SCRIPT_URL + '?' + Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
+  const r = await fetch(url);
+  return await r.json();
+}
+async function apiPost(params) {
+  const body = new URLSearchParams();
+  Object.entries(params).forEach(([k,v]) => body.append(k, typeof v==='object'?JSON.stringify(v):v));
+  const r = await fetch(SCRIPT_URL, { method:'POST', body });
+  return await r.json();
+}
+
+// ══════════════════════════════════════════
+// EMPLOYEE — LOAD / SAVE
+// ══════════════════════════════════════════
+function isImportedMonth(month) {
+  return IMPORTED_MONTHS.includes(month) && !!IMPORTED_DATA[currentUser?.email]?.['2026']?.[month];
+}
+
 async function loadFromSheet() {
   showSaveStatus('loading');
-  
-  // Step 1: Start with IMPORTED_DATA (historical data) as base
+  // Start with imported historical data
   const imported = IMPORTED_DATA[currentUser.email];
-  console.log('IMPORTED_DATA for', currentUser.email, ':', imported);
-  
-  if (imported) {
-    empState = JSON.parse(JSON.stringify(imported)); // deep copy
-  } else {
-    empState = {};
-  }
-  
-  console.log('empState after import:', JSON.stringify(empState['2026']?.['Mar']?.['SWS']));
+  empState = imported ? JSON.parse(JSON.stringify(imported)) : {};
 
-  // Step 2: Overlay with Google Sheet data for current month (only if not in IMPORTED_DATA)
-  try {
-    const result = await apiCall({
-      action: 'loadData',
-      email: currentUser.email,
-      month: empMonth,
-      year: empYear
-    });
-    const importedHasMonth = imported?.[empYear]?.[empMonth];
-    if (result.data && Object.keys(result.data).length > 0 && !importedHasMonth) {
-      if (!empState[empYear]) empState[empYear] = {};
-      empState[empYear][empMonth] = result.data;
-    }
-  } catch(e) {
-    console.log('loadData error:', e);
+  // Overlay Google Sheet data for months NOT in imported data
+  if (!isImportedMonth(empMonth)) {
+    try {
+      const result = await apiCall({ action:'loadData', email:currentUser.email, month:empMonth, year:empYear });
+      if (result.data && Object.keys(result.data).length > 0) {
+        if (!empState[empYear]) empState[empYear] = {};
+        empState[empYear][empMonth] = result.data;
+      }
+    } catch(e) {}
   }
-
   showSaveStatus('saved');
   renderEmp();
 }
 
 async function saveToSheet() {
+  if (isImportedMonth(empMonth)) return; // Don't save imported months
   showSaveStatus('saving');
   const coData = empState[empYear]?.[empMonth]?.[empCo] || {};
   try {
-    await apiPost({
-      action: 'saveData',
-      data: {
-        email: currentUser.email,
-        year: empYear,
-        month: empMonth,
-        company: empCo,
-        deals: coData
-      }
-    });
-    // also save to localStorage as backup
-    localStorage.setItem('pf_ct_'+currentUser.email, JSON.stringify(empState));
+    await apiPost({ action:'saveData', data:{ email:currentUser.email, year:empYear, month:empMonth, company:empCo, deals:coData } });
     showSaveStatus('saved');
-  } catch(e) {
-    localStorage.setItem('pf_ct_'+currentUser.email, JSON.stringify(empState));
-    showSaveStatus('saved');
-  }
+  } catch(e) { showSaveStatus('saved'); }
 }
 
 function showSaveStatus(state) {
   const el = document.getElementById('save-status');
-  if (state==='saving')  { el.textContent='● Saving...'; el.className='save-status save-ing'; }
-  if (state==='saved')   { el.textContent='✓ Saved';     el.className='save-status save-ok'; }
-  if (state==='loading') { el.textContent='↓ Loading...';el.className='save-status save-ing'; }
+  if (!el) return;
+  if (state==='saving') { el.textContent='⏳ Saving...'; el.className='save-status saving'; }
+  else if (state==='saved') { el.textContent='✓ Saved'; el.className='save-status saved'; }
+  else { el.textContent='⏳ Loading...'; el.className='save-status saving'; }
 }
 
+function scheduleSave() { showSaveStatus('saving'); clearTimeout(saveTimer); saveTimer = setTimeout(saveToSheet, 1200); }
+function saveDraft() { saveToSheet(); }
+
+// ══════════════════════════════════════════
+// EMPLOYEE — RENDER
+// ══════════════════════════════════════════
 function getDeals(co, catId) {
   if (!empState[empYear]) empState[empYear] = {};
   if (!empState[empYear][empMonth]) empState[empYear][empMonth] = {};
@@ -1338,65 +1116,17 @@ function getDeals(co, catId) {
   return empState[empYear][empMonth][co][catId];
 }
 
-function debugEmpState() {
-  console.log('=== empState debug ===');
-  console.log('empYear:', empYear, 'empMonth:', empMonth, 'empCo:', empCo);
-  console.log('email:', currentUser?.email);
-  const imported = IMPORTED_DATA[currentUser?.email];
-  console.log('IMPORTED exists:', !!imported);
-  console.log('IMPORTED Mar SWS:', JSON.stringify(imported?.['2026']?.['Mar']?.['SWS']));
-  console.log('empState Mar SWS:', JSON.stringify(empState['2026']?.['Mar']?.['SWS']));
+function calcComm(d, hasPct) {
+  if (d.dealType === 'AD') return parseFloat(d.comm)||0;
+  const amt = parseFloat(d.amount)||0;
+  const pct = parseFloat(d.pct)||0;
+  if ((hasPct === true || hasPct === 'mixed') && amt > 0 && pct > 0) return amt * pct / 100;
+  return parseFloat(d.comm)||0;
 }
 
-async function submitForm() {
-  // Build flat deals array for this company
-  const allDeals = [];
-  CATEGORIES.forEach(cat => {
-    const deals = getDeals(empCo, cat.id);
-    deals.forEach(d => {
-      const comm = cat.hasPct
-        ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100
-        : (parseFloat(d.comm)||0);
-      allDeals.push({
-        category: cat.id,
-        invoice: d.invoice||'',
-        date: d.date||'',
-        amount: d.amount||0,
-        pct: d.pct||'',
-        comm: comm.toFixed(2)
-      });
-    });
-  });
-
-  const btn = document.getElementById('submit-btn');
-  btn.textContent = '⏳ Submitting...';
-  btn.disabled = true;
-
-  try {
-    await apiPost({
-      action: 'submitData',
-      data: {
-        name: currentUser.name,
-        email: currentUser.email,
-        company: empCo,
-        month: empMonth,
-        year: empYear,
-        deals: allDeals
-      }
-    });
-    document.querySelector('.month-tab.active').classList.add('submitted');
-    btn.textContent = '✓ Submitted';
-    btn.className = 'btn btn-green';
-    btn.disabled = false;
-    document.getElementById('submit-modal').classList.add('open');
-  } catch(e) {
-    btn.textContent = 'Submit →';
-    btn.disabled = false;
-    alert('Submit failed. Please try again.');
-  }
+function calcTotal(deals, hasPct) {
+  return deals.reduce((s,d) => s + calcComm(d, hasPct), 0);
 }
-
-function saveDraft() { saveToSheet(); }
 
 function empSwitchMonth(el, month) {
   document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
@@ -1404,36 +1134,52 @@ function empSwitchMonth(el, month) {
   empMonth = month;
   loadFromSheet();
 }
+function empSwitchCo(el, co) {
+  document.querySelectorAll('#emp-co-tabs .co-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  empCo = co;
+  renderEmp();
+}
 
 function renderEmp() {
   if (!currentUser) return;
-  debugEmpState();
-  document.getElementById('emp-period').textContent = empMonth + ' ' + empYear;
-  document.getElementById('sub-co').textContent = empCo;
-  document.getElementById('sub-period').textContent = empMonth + ' ' + empYear;
-  document.getElementById('gt-label').textContent = empCo + ' · ' + empMonth + ' ' + empYear;
+  const readOnly = isImportedMonth(empMonth);
 
-  // Co tabs
+  document.getElementById('emp-period').textContent  = empMonth + ' ' + empYear;
+  document.getElementById('sub-co').textContent      = empCo;
+  document.getElementById('sub-period').textContent  = empMonth + ' ' + empYear;
+  document.getElementById('gt-label').textContent    = empCo + ' · ' + empMonth + ' ' + empYear;
+
   document.getElementById('emp-co-tabs').innerHTML = currentUser.companies.map(co =>
     `<div class="co-tab${co===empCo?' active':''}" onclick="empSwitchCo(this,'${co}')">${co}</div>`
   ).join('');
 
-  // Categories
+  // Read-only banner for imported months
+  const bannerEl = document.getElementById('emp-readonly-banner');
+  if (bannerEl) bannerEl.style.display = readOnly ? 'block' : 'none';
+
   const list = document.getElementById('emp-cat-list');
   list.innerHTML = '';
   CATEGORIES.forEach(cat => {
     const deals = getDeals(empCo, cat.id);
     const total = calcTotal(deals, cat.hasPct);
-    const layout = cat.hasPct ? 'layout-pct' : 'layout-nopct';
-    const card = document.createElement('div');
+    const card  = document.createElement('div');
     card.className = 'cat-card' + (total>0?' has-data':'');
     card.id = 'ccard-'+cat.id;
 
-    const colHead = cat.hasPct
+    const hasPct  = cat.hasPct === true || cat.hasPct === 'mixed';
+    const colHead = hasPct
       ? `<span>#</span><span>Invoice No.</span><span>Date</span><span>Amount ($)</span><span>%</span><span>Comm ($)</span><span></span>`
       : `<span>#</span><span>Invoice No.</span><span>Date</span><span>Amount ($)</span><span>Comm ($)</span><span></span>`;
 
-    const rowsHtml = deals.map((d,i) => buildRow(cat, d, i, layout)).join('');
+    const rowsHtml = deals.map((d,i) => buildRow(cat, d, i, readOnly)).join('');
+
+    const addBtn = readOnly ? '' : (cat.hasPct === 'mixed'
+      ? `<div style="display:flex;gap:0;border-top:1px dashed var(--line2)">
+           <div class="add-row" style="flex:1;border-top:none" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add Normal Deal (% comm)</div>
+           <div class="add-row" style="flex:1;border-top:none;border-left:1px dashed var(--line2);color:var(--amber)" onclick="addDeal('${cat.id}','AD')"><span style="font-size:16px;font-weight:300">+</span> AD / PG Job (Photographer only)</div>
+         </div>`
+      : `<div class="add-row" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add deal</div>`);
 
     card.innerHTML = `
       <div class="cat-header" onclick="toggleCat('${cat.id}')">
@@ -1451,22 +1197,15 @@ function renderEmp() {
         </div>
       </div>
       <div class="cat-body" id="cbody-${cat.id}">
-        <div class="col-head ${layout}">${colHead}</div>
+        <div class="col-head ${hasPct?'layout-pct':'layout-nopct'}">${colHead}</div>
         <div id="crows-${cat.id}">${rowsHtml}</div>
-        ${cat.hasPct === 'mixed'
-          ? `<div style="display:flex;gap:0;border-top:1px dashed var(--line2)">
-               <div class="add-row" style="flex:1;border-top:none" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add Normal Deal (% comm)</div>
-               <div class="add-row" style="flex:1;border-top:none;border-left:1px dashed var(--line2);color:var(--amber)" onclick="addDeal('${cat.id}','AD')"><span style="font-size:16px;font-weight:300">+</span> AD / PG Job (Photographer only)</div>
-             </div>`
-          : `<div class="add-row" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add deal</div>`
-        }
+        ${addBtn}
         <div class="cat-footer">
           <span class="cat-footer-label">Total Comm</span>
           <span class="cat-footer-val" id="cfoot-${cat.id}">$${total.toFixed(2)}</span>
         </div>
       </div>`;
     list.appendChild(card);
-    // auto-open if has data
     if (total > 0) {
       document.getElementById('cbody-'+cat.id).classList.add('open');
       document.getElementById('chev-'+cat.id).classList.add('open');
@@ -1475,116 +1214,97 @@ function renderEmp() {
   updateGT();
 }
 
-function buildRow(cat, d, i, layout) {
-  const isAD = d.dealType === 'AD';
+function buildRow(cat, d, i, readOnly) {
+  const isAD   = d.dealType === 'AD';
   const hasPct = cat.hasPct === true || (cat.hasPct === 'mixed' && !isAD);
-  
-  // For display: if hasPct but no amount/pct (imported data), show comm directly
-  const hasAmtPct = hasPct && parseFloat(d.amount) > 0 && parseFloat(d.pct) > 0;
-  const comm = hasAmtPct
-    ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100
-    : (parseFloat(d.comm)||0);
+  const comm   = calcComm(d, cat.hasPct);
+  const bg     = isAD ? 'style="background:var(--amber-bg)"' : '';
 
-  const layoutClass = hasPct ? 'layout-pct' : 'layout-nopct';
+  if (readOnly) {
+    // Read-only display
+    const pctDisp = hasPct && parseFloat(d.pct) > 0 ? parseFloat(d.pct)+'%' : (d.pct ? d.pct+'%' : '—');
+    if (hasPct) {
+      return `<div class="deal-row layout-pct" ${bg}>
+        <div class="row-n">${isAD?'PG':i+1}</div>
+        <div class="ro-cell">${d.invoice||'—'}</div>
+        <div class="ro-cell">${d.date||'—'}</div>
+        <div class="ro-cell">${d.amount?'$'+parseFloat(d.amount).toLocaleString():'—'}</div>
+        <div class="ro-cell">${pctDisp}</div>
+        <div class="comm-auto${comm===0?' zero':''}">$${comm.toFixed(2)}</div>
+        <div></div>
+      </div>`;
+    } else {
+      return `<div class="deal-row layout-nopct" ${bg}>
+        <div class="row-n">${isAD?'PG':i+1}</div>
+        <div class="ro-cell">${d.invoice||'—'}</div>
+        <div class="ro-cell">${d.date||'—'}</div>
+        <div class="ro-cell">${d.amount?'$'+parseFloat(d.amount).toLocaleString():'—'}</div>
+        <div class="comm-auto${comm===0?' zero':''}">$${comm.toFixed(2)}</div>
+        <div></div>
+      </div>`;
+    }
+  }
 
+  // Editable
   if (hasPct) {
-    return `<div class="deal-row ${layoutClass}">
-      <div class="row-n">${i+1}</div>
-      <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
-      <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
-      <input type="number" value="${d.amount||''}" placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value);recalc('${cat.id}',${i})">
-      <input type="number" value="${d.pct||''}" placeholder="%" min="0" max="100" step="0.5" oninput="setField('${cat.id}',${i},'pct',this.value);recalc('${cat.id}',${i})">
+    return `<div class="deal-row layout-pct" ${bg}>
+      <div class="row-n">${isAD?'PG':i+1}</div>
+      <input type="text"   value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
+      <input type="date"   value="${d.date||''}"    oninput="setField('${cat.id}',${i},'date',this.value)">
+      <input type="number" value="${d.amount||''}"  placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value);recalc('${cat.id}',${i})">
+      <input type="number" value="${d.pct||''}"     placeholder="%" min="0" max="100" step="0.5" oninput="setField('${cat.id}',${i},'pct',this.value);recalc('${cat.id}',${i})">
       <div class="comm-auto${comm===0?' zero':''}" id="cauto-${cat.id}-${i}">$${comm.toFixed(2)}</div>
       <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
     </div>`;
-  } else if (isAD) {
-    // AD / PG Job: same as regular no-pct, employee fills amount and comm
-    return `<div class="deal-row layout-nopct" style="background:var(--amber-bg)">
-      <div class="row-n" style="background:var(--amber-bg);color:var(--amber);font-weight:700;font-size:9px;letter-spacing:.3px">PG</div>
-      <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
-      <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
-      <input type="number" value="${d.amount||''}" placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
-      <input type="number" value="${d.comm||''}" placeholder="Comm $" min="0" step="0.01" style="border-color:#fde68a" oninput="setField('${cat.id}',${i},'comm',this.value);refreshTot('${cat.id}')">
-      <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
-    </div>`;
   } else {
-    return `<div class="deal-row ${layoutClass}">
-      <div class="row-n">${i+1}</div>
-      <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
-      <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
-      <input type="number" value="${d.amount||''}" placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
-      <input type="number" value="${d.comm||''}" placeholder="Comm $" min="0" step="0.01" oninput="setField('${cat.id}',${i},'comm',this.value);refreshTot('${cat.id}')">
+    return `<div class="deal-row layout-nopct" ${bg}>
+      <div class="row-n">${isAD?'PG':i+1}</div>
+      <input type="text"   value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
+      <input type="date"   value="${d.date||''}"    oninput="setField('${cat.id}',${i},'date',this.value)">
+      <input type="number" value="${d.amount||''}"  placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
+      <input type="number" value="${d.comm||''}"    placeholder="Comm $" min="0" step="0.01" oninput="setField('${cat.id}',${i},'comm',this.value);refreshTot('${cat.id}')">
       <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
     </div>`;
   }
 }
 
 function toggleCat(catId) {
-  const body = document.getElementById('cbody-'+catId);
-  const chev = document.getElementById('chev-'+catId);
-  body.classList.toggle('open');
-  chev.classList.toggle('open');
-}
-function empSwitchCo(el, co) {
-  document.querySelectorAll('#emp-co-tabs .co-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  empCo = co;
-  renderEmp();
+  document.getElementById('cbody-'+catId).classList.toggle('open');
+  document.getElementById('chev-'+catId).classList.toggle('open');
 }
 function addDeal(catId, dealType) {
-  const newDeal = { invoice:'', date:'', amount:'', pct:'', comm:'' };
-  if (dealType === 'AD') {
-    newDeal.dealType = 'AD';
-    newDeal.comm = '250';
-  }
-  getDeals(empCo, catId).push(newDeal);
+  if (isImportedMonth(empMonth)) return;
+  const d = { invoice:'', date:'', amount:'', pct:'', comm:'' };
+  if (dealType === 'AD') d.dealType = 'AD';
+  getDeals(empCo, catId).push(d);
   scheduleSave();
   renderEmp();
   setTimeout(() => {
     const body = document.getElementById('cbody-'+catId);
-    if (body && !body.classList.contains('open')) {
-      body.classList.add('open');
-      document.getElementById('chev-'+catId).classList.add('open');
-    }
+    if (body && !body.classList.contains('open')) { body.classList.add('open'); document.getElementById('chev-'+catId).classList.add('open'); }
     const rows = document.querySelectorAll('#crows-'+CSS.escape(catId)+' .deal-row');
     if (rows.length) { const inp = rows[rows.length-1].querySelector('input'); if(inp) inp.focus(); }
   }, 30);
 }
-
-function calcTotal(deals, hasPct) {
-  return deals.reduce((s,d) => {
-    if (d.dealType === 'AD') return s + (parseFloat(d.comm)||0);
-    if (hasPct === true || hasPct === 'mixed') {
-      const amt = parseFloat(d.amount)||0;
-      const pct = parseFloat(d.pct)||0;
-      // If we have amount+pct, calculate; otherwise use comm directly
-      if (amt > 0 && pct > 0) return s + amt * pct / 100;
-      return s + (parseFloat(d.comm)||0);
-    }
-    return s + (parseFloat(d.comm)||0);
-  }, 0);
-}
 function delDeal(catId, idx) {
+  if (isImportedMonth(empMonth)) return;
   getDeals(empCo, catId).splice(idx,1);
-  scheduleSave();
-  renderEmp();
+  scheduleSave(); renderEmp();
 }
 function setField(catId, idx, field, val) {
   const deals = getDeals(empCo, catId);
   if (deals[idx]) { deals[idx][field] = val; scheduleSave(); }
 }
 function recalc(catId, idx) {
-  const d = getDeals(empCo, catId)[idx];
-  if (d.dealType === 'AD') return;
-  const amt = parseFloat(d.amount)||0;
-  const pct = parseFloat(d.pct)||0;
-  const comm = (amt > 0 && pct > 0) ? amt * pct / 100 : (parseFloat(d.comm)||0);
-  const el = document.getElementById(`cauto-${catId}-${idx}`);
-  if (el) { el.textContent = '$'+comm.toFixed(2); el.classList.toggle('zero', comm===0); }
+  const d    = getDeals(empCo, catId)[idx];
+  const cat  = CATEGORIES.find(c => c.id===catId);
+  const comm = calcComm(d, cat.hasPct);
+  const el   = document.getElementById(`cauto-${catId}-${idx}`);
+  if (el) { el.textContent='$'+comm.toFixed(2); el.classList.toggle('zero', comm===0); }
   refreshTot(catId);
 }
 function refreshTot(catId) {
-  const cat = CATEGORIES.find(c => c.id===catId);
+  const cat   = CATEGORIES.find(c => c.id===catId);
   const deals = getDeals(empCo, catId);
   const total = calcTotal(deals, cat.hasPct);
   const s = document.getElementById('csum-'+catId);
@@ -1602,16 +1322,31 @@ function updateGT() {
     if (total>0) { grand+=total; parts.push(`<div class="gt-cat"><span>${cat.id} </span><strong>$${total.toFixed(2)}</strong></div>`); }
   });
   document.getElementById('gt-val').textContent = '$'+grand.toFixed(2);
-  document.getElementById('gt-cats').innerHTML = parts.join('') || '<span style="font-size:11.5px;color:var(--ink3)">No deals yet</span>';
-}
-function scheduleSave() {
-  showSaveStatus('saving');
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveToSheet, 1200);
+  document.getElementById('gt-cats').innerHTML  = parts.join('') || '<span style="font-size:11.5px;color:var(--ink3)">No deals yet</span>';
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+async function submitForm() {
+  if (isImportedMonth(empMonth)) { alert('This month data is locked and cannot be re-submitted.'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = '⏳ Submitting...'; btn.disabled = true;
+  const allDeals = [];
+  CATEGORIES.forEach(cat => {
+    getDeals(empCo, cat.id).forEach(d => {
+      const comm = calcComm(d, cat.hasPct);
+      if (comm > 0) allDeals.push({ category:cat.id, invoice:d.invoice||'', date:d.date||'', amount:d.amount||'', pct:d.pct||'', comm:comm.toFixed(2) });
+    });
+  });
+  try {
+    await apiPost({ action:'submitData', data:{ name:currentUser.name, email:currentUser.email, company:empCo, month:empMonth, year:empYear, deals:allDeals } });
+    document.querySelector('.month-tab.active')?.classList.add('submitted');
+    btn.textContent = '✓ Submitted'; btn.className = 'btn btn-green'; btn.disabled = false;
+    document.getElementById('submit-modal').classList.add('open');
+  } catch(e) { btn.textContent = 'Submit →'; btn.disabled = false; alert('Submit failed. Please try again.'); }
+}
 
+// ══════════════════════════════════════════
+// ADMIN DASHBOARD
+// ══════════════════════════════════════════
 function getAllDataForDownload() {
   const allData = [...adminData];
   Object.entries(IMPORTED_DATA).forEach(([email, yearData]) => {
@@ -1622,13 +1357,8 @@ function getAllDataForDownload() {
         Object.entries(companies).forEach(([co, cats]) => {
           Object.entries(cats).forEach(([cat, deals]) => {
             deals.forEach(d => {
-              const exists = adminData.some(r =>
-                r.email===email && r.month===month && r.company===co && r.category===cat
-              );
-              if (!exists) {
-                allData.push({ name:emp.name, email, company:co, month, year, category:cat,
-                  invoice:d.invoice, date:d.date, amount:d.amount, pct:d.pct, comm:d.comm, ts:'' });
-              }
+              const exists = adminData.some(r => r.email===email && r.month===month && r.company===co && r.category===cat);
+              if (!exists) allData.push({ name:emp.name, email, company:co, month, year, category:cat, invoice:d.invoice, date:d.date, amount:d.amount, pct:d.pct, comm:d.comm, ts:'' });
             });
           });
         });
@@ -1638,13 +1368,209 @@ function getAllDataForDownload() {
   return allData;
 }
 
-// ── Download Modal ──
+async function loadAdminDashboard() {
+  try {
+    const result = await apiCall({ action:'adminGetAll', month:'', year:empYear, requestEmail:currentUser.email });
+    if (result.data) adminData = result.data;
+  } catch(e) {}
+  await loadSettingsFromSheet();
+  renderAdminDashboard();
+}
+
+function adminMfSwitch(el, month) {
+  el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  adminSelectedMonth = month;
+  renderAdminDashboard();
+}
+
+function renderAdminDashboard() {
+  const allData = getAllDataForDownload();
+  const filtered = adminSelectedMonth === 'All' ? allData : allData.filter(d => d.month === adminSelectedMonth);
+
+  const byEmp = {};
+  filtered.forEach(d => {
+    if (!byEmp[d.name]) byEmp[d.name] = { total:0, ts:'' };
+    byEmp[d.name].total += parseFloat(d.comm)||0;
+    if (d.ts && (!byEmp[d.name].ts || d.ts > byEmp[d.name].ts)) byEmp[d.name].ts = d.ts;
+  });
+
+  const submitted = Object.keys(byEmp).length;
+  const pending   = settingsEmps.filter(e => e.email !== ADMIN_EMAIL && !byEmp[e.name]).length;
+  const grandTotal = Object.values(byEmp).reduce((s,e)=>s+e.total,0);
+
+  const statCards = document.querySelectorAll('.stat-card');
+  if (statCards[0]) statCards[0].querySelector('.stat-val').textContent = settingsEmps.filter(e=>e.email!==ADMIN_EMAIL).length;
+  if (statCards[1]) statCards[1].querySelector('.stat-val').textContent = submitted;
+  if (statCards[2]) statCards[2].querySelector('.stat-val').textContent = pending;
+  if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = '$'+grandTotal.toFixed(2);
+
+  const tableBody = document.getElementById('emp-table-body');
+  if (!tableBody) return;
+  tableBody.innerHTML = settingsEmps.filter(e=>e.email!==ADMIN_EMAIL).map(emp => {
+    const sub   = byEmp[emp.name];
+    const total = sub ? sub.total : 0;
+    const tsDate = sub?.ts ? new Date(sub.ts).toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : (sub ? 'Imported' : '—');
+    const coTags = (emp.cos||[]).map(c=>`<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
+    const badge  = sub ? `<span class="status-badge badge-submitted">✓ Has Data</span>` : `<span class="status-badge badge-pending">○ Pending</span>`;
+    return `<div class="emp-table-row" onclick="openDetail('${emp.name}')">
+      <div class="emp-name-cell">${emp.name}</div>
+      <div class="emp-email-cell">${emp.email}</div>
+      <div class="co-tags">${coTags}</div>
+      <div>${badge}</div>
+      <div style="font-size:12px;color:var(--ink3)">${tsDate}</div>
+      <div class="comm-cell-admin ${total===0?'zero':''}">
+        ${total>0?'$'+total.toFixed(2):'—'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// ADMIN DETAIL
+// ══════════════════════════════════════════
+function openDetail(name) {
+  const emp = settingsEmps.find(e => e.name === name) || { name, email:'', cos:['SWS','SWG','BE'] };
+  currentDetailEmp   = emp;
+  currentDetailMonth = 'Mar';
+
+  document.getElementById('detail-name').textContent    = name;
+  document.getElementById('detail-avatar').textContent  = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('detail-meta').textContent    = (emp.email||'') + ' · ' + empYear;
+  document.getElementById('detail-co-tags').innerHTML   = (emp.cos||[]).map(c=>`<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
+
+  // Build month filter from available data
+  const allData   = getAllDataForDownload();
+  const empMonths = [...new Set(allData.filter(d=>d.name===name).map(d=>d.month))];
+  const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const sorted    = MONTH_ORDER.filter(m => empMonths.includes(m));
+  const filterEl  = document.getElementById('detail-month-filter');
+  if (sorted.length > 0) {
+    currentDetailMonth = sorted[sorted.length-1];
+    filterEl.innerHTML = sorted.reverse().map((m,i) =>
+      `<div class="mf-btn${i===0?' active':''}" onclick="detailMonthSwitch(this,'${m}')">${m} ${empYear}</div>`
+    ).join('');
+  } else {
+    filterEl.innerHTML = `<div class="mf-btn active">No data</div>`;
+  }
+
+  // Total for all time
+  const total = allData.filter(d=>d.name===name).reduce((s,d)=>s+(parseFloat(d.comm)||0),0);
+  document.getElementById('detail-total').textContent = '$'+total.toFixed(2);
+
+  renderDetailCo(emp.cos||['SWS','SWG','BE'], (emp.cos||['SWS'])[0]);
+  showPage('page-detail');
+}
+
+function detailMonthSwitch(el, month) {
+  document.querySelectorAll('#detail-month-filter .mf-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentDetailMonth = month;
+  const activeCo = document.querySelector('.detail-co-tab.active');
+  if (activeCo) renderDetailData(activeCo.textContent.trim());
+}
+
+function backToDashboard() { showPage('page-admin'); }
+
+function renderDetailCo(cos, activeCo) {
+  document.getElementById('detail-co-tabs').innerHTML = cos.map(c =>
+    `<div class="detail-co-tab${c===activeCo?' active':''}" onclick="selectDetailCo(this,'${c}')">${c}</div>`
+  ).join('');
+  renderDetailData(activeCo);
+}
+
+function selectDetailCo(el, co) {
+  document.querySelectorAll('.detail-co-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDetailData(co);
+}
+
+function renderDetailData(co) {
+  if (!currentDetailEmp) return;
+  const allData = getAllDataForDownload();
+  const filtered = allData.filter(d => d.name===currentDetailEmp.name && d.month===currentDetailMonth && d.company===co);
+  const byCat = {};
+  filtered.forEach(d => { if(!byCat[d.category]) byCat[d.category]=[]; byCat[d.category].push(d); });
+
+  let html = ''; let coTotal = 0;
+  CATEGORIES.forEach(cat => {
+    const deals   = byCat[cat.id] || [];
+    const hasPct  = cat.hasPct === true || cat.hasPct === 'mixed';
+    const catTotal = deals.reduce((s,d) => {
+      const amt = parseFloat(d.amount)||0, pct = parseFloat(d.pct)||0;
+      return s + ((hasPct && amt>0 && pct>0) ? amt*pct/100 : (parseFloat(d.comm)||0));
+    }, 0);
+    coTotal += catTotal;
+
+    const rowsHtml = deals.map((d,i) => {
+      const amt  = parseFloat(d.amount)||0, pct = parseFloat(d.pct)||0;
+      const comm = (hasPct && amt>0 && pct>0) ? amt*pct/100 : (parseFloat(d.comm)||0);
+      if (hasPct) return `<tr>
+        <td style="color:var(--ink3)">${i+1}</td>
+        <td style="font-family:monospace;font-size:12px">${d.invoice||'—'}</td>
+        <td style="color:var(--ink3)">${d.date||'—'}</td>
+        <td style="text-align:right">${amt?'$'+amt.toLocaleString():'—'}</td>
+        <td style="text-align:right;color:var(--ink3)">${pct?pct+'%':'—'}</td>
+        <td class="comm-val">$${comm.toFixed(2)}</td></tr>`;
+      return `<tr>
+        <td style="color:var(--ink3)">${i+1}</td>
+        <td style="font-family:monospace;font-size:12px">${d.invoice||'—'}</td>
+        <td style="color:var(--ink3)">${d.date||'—'}</td>
+        <td style="text-align:right">${amt?'$'+amt.toLocaleString():'—'}</td>
+        <td class="comm-val">$${comm.toFixed(2)}</td></tr>`;
+    }).join('');
+
+    html += `<div class="cat-card${catTotal>0?' has-data':''}" style="margin-bottom:10px">
+      <div class="cat-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.chevron').classList.toggle('open')">
+        <div class="cat-header-left">
+          <div class="cat-icon">${cat.icon}</div>
+          <div><div class="cat-name">${cat.id}</div><div class="cat-rule">${cat.rule}</div></div>
+        </div>
+        <div class="cat-header-right">
+          <span class="cat-deals">${deals.length} deal${deals.length!==1?'s':''}</span>
+          <span class="cat-sum${catTotal===0?' zero':''}">$${catTotal.toFixed(2)}</span>
+          <span class="chevron${catTotal>0?' open':''}">▼</span>
+        </div>
+      </div>
+      <div class="cat-body${catTotal>0?' open':''}">
+        ${deals.length>0 ? `
+        <table class="detail-table" style="width:100%">
+          <thead><tr><th>#</th><th>Invoice</th><th>Date</th><th>Amount</th>${hasPct?'<th>%</th>':''}<th>Comm</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        <div class="cat-footer"><span class="cat-footer-label">Total Comm</span><span class="cat-footer-val">$${catTotal.toFixed(2)}</span></div>`
+        : '<div style="padding:12px 16px;font-size:12px;color:var(--ink3)">No deals this month</div>'}
+      </div>
+    </div>`;
+  });
+
+  // Summary box like employee view
+  const summaryParts = CATEGORIES.filter(cat => (byCat[cat.id]||[]).length > 0).map(cat => {
+    const deals = byCat[cat.id]||[];
+    const hasPct = cat.hasPct===true||cat.hasPct==='mixed';
+    const t = deals.reduce((s,d)=>{ const amt=parseFloat(d.amount)||0,pct=parseFloat(d.pct)||0; return s+((hasPct&&amt>0&&pct>0)?amt*pct/100:(parseFloat(d.comm)||0)); },0);
+    return `<div class="gt-cat"><span>${cat.id} </span><strong>$${t.toFixed(2)}</strong></div>`;
+  }).join('');
+
+  html += `<div class="gt-box" style="margin-top:16px">
+    <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">${co} · ${currentDetailMonth} ${empYear}</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Total Commission</div>
+    <div class="gt-cats">${summaryParts||'<span style="font-size:11.5px;color:var(--ink3)">No deals this month</span>'}</div>
+    <div class="gt-val">$${coTotal.toFixed(2)}</div>
+  </div>`;
+
+  document.getElementById('detail-data').innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// DOWNLOAD
+// ══════════════════════════════════════════
 function showDownloadModal() {
-  // Render employee checkboxes
   const list = document.getElementById('dl-emp-list');
-  list.innerHTML = settingsEmps.map((emp, i) => `
-    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;user-select:none" onclick="dlToggle(${i},this)">
-      <div style="width:18px;height:18px;border:2px solid var(--blue);border-radius:4px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:#fff;font-weight:700" id="dl-check-${i}">✓</div>
+  dlSelected.clear();
+  list.innerHTML = settingsEmps.filter(e=>e.email!==ADMIN_EMAIL).map((emp,i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer" onclick="dlToggle(${i},this)">
+      <div style="width:18px;height:18px;border:2px solid var(--line);border-radius:4px;flex-shrink:0" id="dl-check-${i}"></div>
       <div>
         <div style="font-size:13px;font-weight:600">${emp.name}</div>
         <div style="font-size:11px;color:var(--ink3)">${emp.email}</div>
@@ -1654,369 +1580,128 @@ function showDownloadModal() {
   document.getElementById('download-options-modal').classList.add('open');
 }
 
-let dlSelected = new Set();
 function dlToggle(i, el) {
   const check = document.getElementById('dl-check-'+i);
   if (dlSelected.has(i)) {
-    dlSelected.delete(i);
-    check.style.background = 'transparent';
-    check.style.color = 'transparent';
-    el.style.borderColor = 'var(--line)';
+    dlSelected.delete(i); check.style.background='transparent'; check.style.borderColor='var(--line)'; el.style.borderColor='var(--line)';
   } else {
-    dlSelected.add(i);
-    check.style.background = 'var(--blue)';
-    check.style.color = '#fff';
-    el.style.borderColor = 'var(--blue)';
+    dlSelected.add(i); check.style.background='var(--blue)'; check.style.borderColor='var(--blue)'; el.style.borderColor='var(--blue)';
   }
 }
 function dlSelectAll(select) {
-  settingsEmps.forEach((_, i) => {
-    const check = document.getElementById('dl-check-'+i);
-    const label = check?.closest('label');
-    if (select) { dlSelected.add(i); if(check){check.style.background='var(--blue)';check.style.color='#fff';} if(label) label.style.borderColor='var(--blue)'; }
-    else { dlSelected.delete(i); if(check){check.style.background='transparent';check.style.color='transparent';} if(label) label.style.borderColor='var(--line)'; }
+  const emps = settingsEmps.filter(e=>e.email!==ADMIN_EMAIL);
+  emps.forEach((_,i) => { const check=document.getElementById('dl-check-'+i); const label=check?.closest('label');
+    if (select) { dlSelected.add(i); if(check){check.style.background='var(--blue)';check.style.borderColor='var(--blue)';} if(label) label.style.borderColor='var(--blue)'; }
+    else { dlSelected.delete(i); if(check){check.style.background='transparent';check.style.borderColor='var(--line)';} if(label) label.style.borderColor='var(--line)'; }
   });
 }
 
 async function downloadSelected() {
-  if (dlSelected.size === 0) { alert('Please select at least one employee.'); return; }
+  if (!dlSelected.size) { alert('Please select at least one employee.'); return; }
   const statusEl = document.getElementById('dl-status');
-  statusEl.style.display = 'block';
-  statusEl.style.color = 'var(--amber)';
-
+  statusEl.style.display='block'; statusEl.style.color='var(--amber)';
   const allData = getAllDataForDownload();
-  const selected = [...dlSelected].map(i => settingsEmps[i]);
-
-  for (const emp of selected) {
-    statusEl.textContent = `⏳ Generating ${emp.name}...`;
-    await new Promise(r => setTimeout(r, 50));
-    const subs = allData.filter(d => d.name === emp.name);
-    generateAndDownloadCTForm(emp.name, subs);
-    await new Promise(r => setTimeout(r, 300));
+  const emps = settingsEmps.filter(e=>e.email!==ADMIN_EMAIL);
+  for (const i of dlSelected) {
+    const emp = emps[i];
+    statusEl.textContent = '⏳ Generating '+emp.name+'...';
+    await new Promise(r=>setTimeout(r,50));
+    generateAndDownloadCTForm(emp.name, allData.filter(d=>d.name===emp.name));
+    await new Promise(r=>setTimeout(r,300));
   }
-
-  statusEl.textContent = '✓ All done!';
-  statusEl.style.color = 'var(--green)';
-  setTimeout(() => {
-    closeModal('download-options-modal');
-    statusEl.style.color = 'var(--amber)';
-    dlSelected.clear();
-  }, 1500);
+  statusEl.textContent='✓ Done!'; statusEl.style.color='var(--green)';
+  setTimeout(()=>{ closeModal('download-options-modal'); dlSelected.clear(); statusEl.style.color='var(--amber)'; }, 1500);
 }
 
 function generateAndDownloadCTForm(empName, subs) {
   const wb = XLSX.utils.book_new();
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  MONTHS.forEach(month => {
-    const monthData = subs.filter(d => d.month === month);
-    const ws = buildCTFormSheet(empName, monthData, month);
-    XLSX.utils.book_append_sheet(wb, ws, month + ' ' + empYear);
+  ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(month => {
+    XLSX.utils.book_append_sheet(wb, buildCTFormSheet(empName, subs.filter(d=>d.month===month), month), month+' '+empYear);
   });
-
-  XLSX.writeFile(wb, empName.replace(/ /g,'_') + '_CT_' + empYear + '.xlsx');
+  XLSX.writeFile(wb, empName.replace(/ /g,'_')+'_CT_'+empYear+'.xlsx');
 }
-
-// ── Individual employee download ──
-let currentDetailEmp = null;
-let currentDetailMonth = 'Mar';
 
 function downloadOneMonth() {
   if (!currentDetailEmp) return;
-  const allData = getAllDataForDownload();
-  const subs = allData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
-  if (!subs.length) { alert('No data for this employee this month.'); return; }
+  const subs = getAllDataForDownload().filter(d=>d.name===currentDetailEmp.name&&d.month===currentDetailMonth);
+  if (!subs.length) { alert('No data for this month.'); return; }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, subs, currentDetailMonth), currentDetailMonth + ' ' + empYear);
-  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, subs, currentDetailMonth), currentDetailMonth+' '+empYear);
+  XLSX.writeFile(wb, currentDetailEmp.name.replace(/ /g,'_')+'_CT_'+currentDetailMonth+empYear+'.xlsx');
 }
 
 function downloadOneAll() {
   if (!currentDetailEmp) return;
-  const allData = getAllDataForDownload();
-  const subs = allData.filter(d => d.name === currentDetailEmp.name);
-  if (!subs.length) { alert('No data for this employee.'); return; }
+  const subs = getAllDataForDownload().filter(d=>d.name===currentDetailEmp.name);
+  if (!subs.length) { alert('No data.'); return; }
   generateAndDownloadCTForm(currentDetailEmp.name, subs);
 }
 
-// ══════════════════════════════════════════
-// ══════════════════════════════════════════
-// BUILD CT FORM — matches ct.js reading logic exactly
-// ct.js reads: catCol+5='Total Comm', catCol+6=value
-// Company blocks at col 1,9,17 (0-indexed: 0,8,16)
-// ══════════════════════════════════════════
 function buildCTFormSheet(empName, data, month) {
-  const CATS = ['New Sales','RSVP','UpSales','Selection Fitting','Photo Selection','Car Decor','Review','Online Sales'];
-  const CAT_LONG = {
-    'New Sales': 'New Sales\n5% of total revenue\n(max. 2 pax share)\n\n**at least take 50% deposit then end of the month will receive the comm\n** if lesser than 50% deposit, comm will be only received after 50% deposit paid',
-    'Online Sales': 'Online Sales/\nAccessories'
-  };
-  const COS = ['SWS','SWG','BE'];
-  // 0-indexed: SWS starts col 0, SWG col 8, BE col 16
-  const CO_COL = { SWS:0, SWG:8, BE:16 };
-  const CO_DISPLAY = { SWS:'SWS', SWG:'Global', BE:'BE' };
-
-  // Build summary and detail data
-  const summary = {};
-  const details = {};
-  COS.forEach(co => {
-    summary[co] = {};
-    details[co] = {};
-    CATS.forEach(cat => {
-      summary[co][cat] = { total:0, count:0 };
-      details[co][cat] = [];
-    });
-  });
-  data.forEach(d => {
-    const co = d.company; const cat = d.category;
-    if (!summary[co] || !summary[co][cat]) return;
-    const comm = parseFloat(d.comm)||0;
-    summary[co][cat].total += comm;
-    if (comm > 0) summary[co][cat].count++;
+  const CATS=['New Sales','RSVP','UpSales','Selection Fitting','Photo Selection','Car Decor','Review','Online Sales'];
+  const COS=['SWS','SWG','BE'], CO_COL={SWS:0,SWG:8,BE:16}, CO_DISPLAY={SWS:'SWS',SWG:'Global',BE:'BE'};
+  const CAT_LONG={'New Sales':'New Sales\n5% of total revenue\n(max. 2 pax share)','Online Sales':'Online Sales/\nAccessories'};
+  const summary={}, details={};
+  COS.forEach(co=>{summary[co]={};details[co]={};CATS.forEach(cat=>{summary[co][cat]={total:0,count:0};details[co][cat]=[];});});
+  data.forEach(d=>{
+    const co=d.company,cat=d.category;
+    if(!summary[co]||!summary[co][cat]) return;
+    const comm=parseFloat(d.comm)||0;
+    summary[co][cat].total+=comm; if(comm>0) summary[co][cat].count++;
     details[co][cat].push(d);
   });
-
-  const TOTAL_COLS = 26;
-  const sheet = [];
-  function getRow(r) {
-    while (sheet.length <= r) sheet.push(new Array(TOTAL_COLS).fill(''));
-    return sheet[r];
-  }
-
-  // ── Row 0 (row 1): Title
-  getRow(0)[0] = 'Monthly Individual Comm and Incentive Format';
-  // ── Row 1 (row 2): Employee name
-  getRow(1)[0] = empName;
-  // ── Row 2 (row 3): Month/Year
-  getRow(2)[0] = `${month},${empYear}`;
-
-  // ── Summary section (rows 4-15) ──
-  COS.forEach(co => {
-    const c = CO_COL[co];
-    // Row 4 (row 5): Company name
-    getRow(4)[c] = CO_DISPLAY[co];
-    // Row 5 (row 6): Headers
-    getRow(5)[c]   = 'Category';
-    getRow(5)[c+1] = 'Total Commission';
-    getRow(5)[c+2] = 'No.s of Deal';
-    // Rows 6-13 (rows 7-14): Categories
-    CATS.forEach((cat, ci) => {
-      const r = 6 + ci;
-      const s = summary[co][cat];
-      getRow(r)[c]   = cat;
-      getRow(r)[c+1] = s.total || 0;
-      getRow(r)[c+2] = s.count;
-    });
-    // Row 15 (row 16): Total
-    getRow(15)[c]   = 'Total';
-    getRow(15)[c+1] = CATS.reduce((s,cat) => s + summary[co][cat].total, 0);
-    getRow(15)[c+2] = CATS.reduce((s,cat) => s + summary[co][cat].count, 0);
+  const sheet=[]; function getRow(r){while(sheet.length<=r)sheet.push(new Array(26).fill(''));return sheet[r];}
+  getRow(0)[0]='Monthly Individual Comm and Incentive Format';
+  getRow(1)[0]=empName; getRow(2)[0]=month+','+empYear;
+  COS.forEach(co=>{const c=CO_COL[co];
+    getRow(4)[c]=CO_DISPLAY[co];
+    getRow(5)[c]='Category';getRow(5)[c+1]='Total Commission';getRow(5)[c+2]='No.s of Deal';
+    CATS.forEach((cat,ci)=>{const r=6+ci,s=summary[co][cat];getRow(r)[c]=cat;getRow(r)[c+1]=s.total||0;getRow(r)[c+2]=s.count;});
+    getRow(15)[c]='Total';getRow(15)[c+1]=CATS.reduce((s,cat)=>s+summary[co][cat].total,0);getRow(15)[c+2]=CATS.reduce((s,cat)=>s+summary[co][cat].count,0);
   });
-
-  // ── Detail section ──
-  // Row 17 (row 18): Company headers again
-  COS.forEach(co => { getRow(17)[CO_COL[co]] = CO_DISPLAY[co]; });
-
-  // Row 18 (row 19): Column headers
-  // catCol+0=Category, +1=No.s, +2=Invoice Date, +3=Invoice, +4=Amount, +5=%, +6=Comm
-  COS.forEach(co => {
-    const c = CO_COL[co];
-    getRow(18)[c]   = 'Category';
-    getRow(18)[c+1] = 'No.s';
-    getRow(18)[c+2] = 'Invoice Date';
-    getRow(18)[c+3] = 'Invoice';
-    getRow(18)[c+4] = 'Amount';
-    getRow(18)[c+5] = '%';
-    getRow(18)[c+6] = 'Comm';
+  COS.forEach(co=>{const c=CO_COL[co];getRow(17)[c]=CO_DISPLAY[co];
+    ['Category','No.s','Invoice Date','Invoice','Amount','%','Comm'].forEach((h,i)=>{getRow(18)[c+i]=h;});
   });
-
-  // Detail rows per category
-  let currentRow = 19;
-  CATS.forEach(cat => {
-    const maxDeals = Math.max(...COS.map(co => details[co][cat].length), 5);
-    const catLabel = CAT_LONG[cat] || cat;
-
-    // Category label row (merged across deal rows in original, here just first row)
-    COS.forEach(co => {
-      getRow(currentRow)[CO_COL[co]] = catLabel;
-    });
-
-    // Deal rows
-    for (let i = 0; i < maxDeals; i++) {
-      const row = currentRow + 1 + i;
-      COS.forEach(co => {
-        const c = CO_COL[co];
-        const deal = details[co][cat][i] || {};
-
-        getRow(row)[c+1] = i + 1;                                          // No.s
-        getRow(row)[c+2] = deal.date || '';                                 // Invoice Date
-        getRow(row)[c+3] = deal.invoice || '';                              // Invoice
-        getRow(row)[c+4] = deal.amount ? parseFloat(deal.amount) : '';     // Amount
-        // col+5 = % — ct.js looks for 'Total Comm' here on total row
-        getRow(row)[c+5] = deal.pct ? parseFloat(deal.pct)/100 : '';       // %
-        getRow(row)[c+6] = deal.comm ? parseFloat(deal.comm) : '';         // Comm
+  let row=19;
+  CATS.forEach(cat=>{
+    const maxDeals=Math.max(...COS.map(co=>details[co][cat].length),5);
+    const catLabel=CAT_LONG[cat]||cat;
+    COS.forEach(co=>{getRow(row)[CO_COL[co]]=catLabel;});
+    for(let i=0;i<maxDeals;i++){
+      const r=row+1+i;
+      COS.forEach(co=>{const c=CO_COL[co],d=details[co][cat][i]||{};
+        getRow(r)[c+1]=i+1;
+        getRow(r)[c+2]=d.date||'';
+        getRow(r)[c+3]=d.invoice||'';
+        getRow(r)[c+4]=d.amount?parseFloat(d.amount):'';
+        getRow(r)[c+5]=d.pct?parseFloat(d.pct)/100:'';
+        getRow(r)[c+6]=d.comm?parseFloat(d.comm):'';
       });
     }
-
-    // Total Comm row — ct.js reads: catCol+5='Total Comm', catCol+6=value
-    const tcRow = currentRow + 1 + maxDeals;
-    COS.forEach(co => {
-      const c = CO_COL[co];
-      const total = summary[co][cat].total;
-      getRow(tcRow)[c+5] = 'Total Comm';   // catCol+5
-      getRow(tcRow)[c+6] = total;          // catCol+6
-    });
-
-    currentRow = tcRow + 1;
+    const tcRow=row+1+maxDeals;
+    COS.forEach(co=>{const c=CO_COL[co];getRow(tcRow)[c+5]='Total Comm';getRow(tcRow)[c+6]=summary[co][cat].total;});
+    row=tcRow+1;
   });
-
   return XLSX.utils.aoa_to_sheet(sheet);
 }
 
 // ══════════════════════════════════════════
-// IMPORTED HISTORICAL DATA (Feb + Mar 2026)
-// ══════════════════════════════════════════
-const IMPORTED_DATA = {"sw999.ba@gmail.com":{"2026":{"Feb":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"800.4"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"85.0"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"140.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]}},"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"249.4"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"67.5"}]},"SWG":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"626.68"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"995.13"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"147.5"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"}]}}}},"sw999.sales@gmail.com":{"2026":{"Feb":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"31.76"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"120.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"7.5"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"484.28"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"82.55"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"260.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"168.8"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"792.49"}],"UpSales":[{"invoice":"","date":"","amount":"","pct":"","comm":"210.7"}],"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"170.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"84.4"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"105.0"}]}}}},"sw999.pg1@gmail.com":{"2026":{"Feb":{"SWS":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"183.8"}]}},"Mar":{"BE":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"106.9"}]}}}},"sw999.pg2@gmail.com":{"2026":{"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"194.4"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"250.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]}}}}};
-
-// ══════════════════════════════════════════
-// ADMIN DASHBOARD — render with real employee list
-// ══════════════════════════════════════════
-async function loadAdminDashboard() {
-  // Load submissions
-  try {
-    const result = await apiCall({
-      action: 'adminGetAll',
-      month: '',
-      year: empYear,
-      requestEmail: currentUser.email
-    });
-    if (result.data) {
-      adminData = result.data;
-    }
-  } catch(e) {
-    console.log('Admin load error:', e);
-  }
-  // Load employees then render dashboard
-  await loadSettingsFromSheet();
-  renderAdminDashboard();
-}
-
-function renderAdminDashboard() {
-  // Merge adminData (submitted) with imported data
-  const allData = [...adminData];
-
-  // Also include imported data that hasn't been submitted yet
-  Object.entries(IMPORTED_DATA).forEach(([email, yearData]) => {
-    const emp = settingsEmps.find(e => e.email === email);
-    if (!emp) return;
-    Object.entries(yearData).forEach(([year, months]) => {
-      Object.entries(months).forEach(([month, companies]) => {
-        Object.entries(companies).forEach(([co, cats]) => {
-          Object.entries(cats).forEach(([cat, deals]) => {
-            deals.forEach(d => {
-              // Only add if not already in adminData
-              const exists = adminData.some(r =>
-                r.email === email && r.month === month && r.company === co && r.category === cat
-              );
-              if (!exists) {
-                allData.push({
-                  name: emp.name, email, company: co,
-                  month, year, category: cat,
-                  invoice: d.invoice, date: d.date,
-                  amount: d.amount, pct: d.pct, comm: d.comm,
-                  ts: '', imported: true
-                });
-              }
-            });
-          });
-        });
-      });
-    });
-  });
-
-  // Filter by selected month
-  const filtered = adminSelectedMonth === 'All'
-    ? allData
-    : allData.filter(d => d.month === adminSelectedMonth);
-
-  // Group submissions by employee name
-  const submittedNames = {};
-  filtered.forEach(row => {
-    if (!submittedNames[row.name]) submittedNames[row.name] = { total:0, months:new Set(), ts:'' };
-    submittedNames[row.name].total += parseFloat(row.comm)||0;
-    submittedNames[row.name].months.add(row.month);
-    if (row.ts && (!submittedNames[row.name].ts || row.ts > submittedNames[row.name].ts)) {
-      submittedNames[row.name].ts = row.ts;
-    }
-  });
-
-  const submitted = Object.keys(submittedNames).length;
-  const pending = settingsEmps.filter(e => !submittedNames[e.name]).length;
-  const grandTotal = Object.values(submittedNames).reduce((s,e)=>s+e.total,0);
-
-  // Update stat cards
-  const statCards = document.querySelectorAll('.stat-card');
-  if (statCards[0]) statCards[0].querySelector('.stat-val').textContent = settingsEmps.length;
-  if (statCards[1]) statCards[1].querySelector('.stat-val').textContent = submitted;
-  if (statCards[2]) statCards[2].querySelector('.stat-val').textContent = pending;
-  if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = '$'+grandTotal.toFixed(2);
-
-  // Render employee table
-  const tableBody = document.getElementById('emp-table-body');
-  if (!tableBody) return;
-
-  tableBody.innerHTML = settingsEmps.map(emp => {
-    const sub = submittedNames[emp.name];
-    const hasData = !!sub;
-    const total = hasData ? sub.total : 0;
-    const tsDate = hasData && sub.ts ? new Date(sub.ts).toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : (hasData ? 'Imported' : '—');
-    const coTags = (emp.cos||[]).map(c=>`<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
-    const badge = hasData
-      ? `<span class="status-badge badge-submitted">✓ Has Data</span>`
-      : `<span class="status-badge badge-pending">○ Pending</span>`;
-
-    return `<div class="emp-table-row" onclick="openDetail('${emp.name}')">
-      <div class="emp-name-cell">${emp.name}</div>
-      <div class="emp-email-cell">${emp.email}</div>
-      <div class="co-tags">${coTags}</div>
-      <div>${badge}</div>
-      <div style="font-size:12px;color:var(--ink3)">${tsDate}</div>
-      <div class="comm-cell-admin ${total===0?'zero':''}">
-        ${total>0 ? '$'+total.toFixed(2) : '—'}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ══════════════════════════════════════════
-// SETTINGS — load from Google Sheet
+// SETTINGS
 // ══════════════════════════════════════════
 const ALL_COS = ['SWS','SWG','BE','SS','LOL','BJ','MB'];
-let settingsEmps = [];
 
 async function loadSettingsFromSheet() {
   try {
-    const result = await apiCall({
-      action: 'getEmployees',
-      requestEmail: currentUser.email
-    });
-    if (result.employees && result.employees.length > 0) {
-      settingsEmps = result.employees;
-    } else {
-      // fallback
-      settingsEmps = [
-        { email:'sw999.ba@gmail.com',    name:'Ng Chu Hong',      cos:['SWS','SWG','BE'] },
-        { email:'sw999.sales@gmail.com', name:'Tan Poh Hui',      cos:['SWS','SWG','BE'] },
-        { email:'sw999.pg1@gmail.com',   name:'Choi Shih Seng',   cos:['SWS','SWG','BE'] },
-        { email:'sw999.pg2@gmail.com',   name:'Choong Chun Xien', cos:['SWS','SWG','BE'] },
-      ];
-    }
+    const result = await apiCall({ action:'getEmployees', requestEmail:currentUser.email });
+    if (result.employees?.length > 0) settingsEmps = result.employees;
+    else throw new Error('empty');
   } catch(e) {
     settingsEmps = [
-      { email:'sw999.ba@gmail.com',    name:'Ng Chu Hong',      cos:['SWS','SWG','BE'] },
-      { email:'sw999.sales@gmail.com', name:'Tan Poh Hui',      cos:['SWS','SWG','BE'] },
-      { email:'sw999.pg1@gmail.com',   name:'Choi Shih Seng',   cos:['SWS','SWG','BE'] },
-      { email:'sw999.pg2@gmail.com',   name:'Choong Chun Xien', cos:['SWS','SWG','BE'] },
+      {email:'sw999.ba@gmail.com',    name:'Ng Chu Hong',      cos:['SWS','SWG','BE']},
+      {email:'sw999.sales@gmail.com', name:'Tan Poh Hui',      cos:['SWS','SWG','BE']},
+      {email:'sw999.pg1@gmail.com',   name:'Choi Shih Seng',   cos:['SWS','SWG','BE']},
+      {email:'sw999.pg2@gmail.com',   name:'Choong Chun Xien', cos:['SWS','SWG','BE']},
+      {email:ADMIN_EMAIL,             name:'Admin',             cos:['SWS','SWG','BE','SS','LOL','BJ','MB','LDBS']},
     ];
   }
   renderSettings();
@@ -2024,32 +1709,26 @@ async function loadSettingsFromSheet() {
 
 async function saveEmployees() {
   const btn = document.querySelector('[onclick="saveEmployees()"]');
-  btn.textContent = '⏳ Saving...';
-  btn.disabled = true;
+  btn.textContent='⏳ Saving...'; btn.disabled=true;
   try {
-    await apiPost({
-      action: 'saveEmployees',
-      data: settingsEmps,
-      requestEmail: currentUser.email
-    });
-    document.getElementById('settings-success').style.display = 'block';
-    document.getElementById('settings-error').style.display = 'none';
-    setTimeout(() => document.getElementById('settings-success').style.display='none', 3000);
+    await apiPost({ action:'saveEmployees', data:settingsEmps, requestEmail:currentUser.email });
+    document.getElementById('settings-success').style.display='block';
+    document.getElementById('settings-error').style.display='none';
+    setTimeout(()=>document.getElementById('settings-success').style.display='none',3000);
   } catch(e) {
-    document.getElementById('settings-error').textContent = 'Save failed. Please try again.';
-    document.getElementById('settings-error').style.display = 'block';
+    document.getElementById('settings-error').textContent='Save failed. Please try again.';
+    document.getElementById('settings-error').style.display='block';
   }
-  btn.textContent = '💾 Save Changes';
-  btn.disabled = false;
+  btn.textContent='💾 Save Changes'; btn.disabled=false;
 }
 
 function renderSettings() {
   document.getElementById('emp-settings-list').innerHTML = settingsEmps.map((e,i) => `
     <div class="emp-settings-row">
       <input class="settings-input" value="${e.email}" oninput="settingsEmps[${i}].email=this.value">
-      <input class="settings-input" value="${e.name}" oninput="settingsEmps[${i}].name=this.value">
+      <input class="settings-input" value="${e.name}"  oninput="settingsEmps[${i}].name=this.value">
       <div class="co-checkboxes">
-        ${ALL_COS.map(co => `
+        ${ALL_COS.map(co=>`
           <label class="co-checkbox-label${(e.cos||[]).includes(co)?' checked':''}" onclick="toggleEmpCo(this,${i},'${co}')">
             <input type="checkbox" ${(e.cos||[]).includes(co)?'checked':''}>${co}
           </label>`).join('')}
@@ -2057,34 +1736,37 @@ function renderSettings() {
       <button class="btn btn-red btn-sm" onclick="removeEmp(${i})">Remove</button>
     </div>`).join('');
 }
-function toggleEmpCo(label, empIdx, co) {
+
+function toggleEmpCo(label, i, co) {
   label.classList.toggle('checked');
-  const emp = settingsEmps[empIdx];
-  if (!emp.cos) emp.cos = [];
-  if (emp.cos.includes(co)) emp.cos = emp.cos.filter(c=>c!==co);
-  else emp.cos.push(co);
+  if (!settingsEmps[i].cos) settingsEmps[i].cos=[];
+  if (settingsEmps[i].cos.includes(co)) settingsEmps[i].cos=settingsEmps[i].cos.filter(c=>c!==co);
+  else settingsEmps[i].cos.push(co);
 }
 function toggleCheck(label) { label.classList.toggle('checked'); }
 function removeEmp(i) {
-  if (confirm('Remove '+settingsEmps[i].name+'?')) {
-    settingsEmps.splice(i,1); renderSettings();
-  }
+  if (confirm('Remove '+settingsEmps[i].name+'?')) { settingsEmps.splice(i,1); renderSettings(); }
 }
 function addEmployee() {
-  const email = document.getElementById('new-email').value.trim();
-  const name  = document.getElementById('new-name').value.trim();
-  const cos   = [...document.querySelectorAll('#new-co-checks .co-checkbox-label.checked')].map(l=>l.textContent.trim());
+  const email=document.getElementById('new-email').value.trim();
+  const name =document.getElementById('new-name').value.trim();
+  const cos  =[...document.querySelectorAll('#new-co-checks .co-checkbox-label.checked')].map(l=>l.textContent.trim());
   if (!email||!name) { alert('Please fill email and name'); return; }
   if (settingsEmps.find(e=>e.email===email)) { alert('Email already exists'); return; }
-  settingsEmps.push({ email, name, cos });
+  settingsEmps.push({email,name,cos});
   document.getElementById('new-email').value='';
   document.getElementById('new-name').value='';
   document.querySelectorAll('#new-co-checks .co-checkbox-label').forEach(l=>{
-    const val = l.querySelector('input').value;
-    l.classList.toggle('checked', ['SWS','SWG','BE'].includes(val));
+    l.classList.toggle('checked',['SWS','SWG','BE'].includes(l.querySelector('input').value));
   });
   renderSettings();
 }
+
+function mfSwitch(el, month) {
+  el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleAuth()"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
