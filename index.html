@@ -1227,13 +1227,17 @@ async function loadFromSheet() {
   
   // Step 1: Start with IMPORTED_DATA (historical data) as base
   const imported = IMPORTED_DATA[currentUser.email];
+  console.log('IMPORTED_DATA for', currentUser.email, ':', imported);
+  
   if (imported) {
     empState = JSON.parse(JSON.stringify(imported)); // deep copy
   } else {
     empState = {};
   }
+  
+  console.log('empState after import:', JSON.stringify(empState['2026']?.['Mar']?.['SWS']));
 
-  // Step 2: Overlay with Google Sheet data for current month
+  // Step 2: Overlay with Google Sheet data for current month (only if not in IMPORTED_DATA)
   try {
     const result = await apiCall({
       action: 'loadData',
@@ -1241,14 +1245,13 @@ async function loadFromSheet() {
       month: empMonth,
       year: empYear
     });
-    // Only use Sheet data if it has content AND it's not a month already in IMPORTED_DATA
     const importedHasMonth = imported?.[empYear]?.[empMonth];
     if (result.data && Object.keys(result.data).length > 0 && !importedHasMonth) {
       if (!empState[empYear]) empState[empYear] = {};
       empState[empYear][empMonth] = result.data;
     }
   } catch(e) {
-    // No fallback to localStorage — localStorage may have old incorrect data
+    console.log('loadData error:', e);
   }
 
   showSaveStatus('saved');
@@ -1291,6 +1294,16 @@ function getDeals(co, catId) {
   if (!empState[empYear][empMonth][co]) empState[empYear][empMonth][co] = {};
   if (!empState[empYear][empMonth][co][catId]) empState[empYear][empMonth][co][catId] = [];
   return empState[empYear][empMonth][co][catId];
+}
+
+function debugEmpState() {
+  console.log('=== empState debug ===');
+  console.log('empYear:', empYear, 'empMonth:', empMonth, 'empCo:', empCo);
+  console.log('email:', currentUser?.email);
+  const imported = IMPORTED_DATA[currentUser?.email];
+  console.log('IMPORTED exists:', !!imported);
+  console.log('IMPORTED Mar SWS:', JSON.stringify(imported?.['2026']?.['Mar']?.['SWS']));
+  console.log('empState Mar SWS:', JSON.stringify(empState['2026']?.['Mar']?.['SWS']));
 }
 
 async function submitForm() {
@@ -1352,6 +1365,7 @@ function empSwitchMonth(el, month) {
 
 function renderEmp() {
   if (!currentUser) return;
+  debugEmpState();
   document.getElementById('emp-period').textContent = empMonth + ' ' + empYear;
   document.getElementById('sub-co').textContent = empCo;
   document.getElementById('sub-period').textContent = empMonth + ' ' + empYear;
