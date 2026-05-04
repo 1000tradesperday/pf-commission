@@ -1422,7 +1422,10 @@ function renderEmp() {
 function buildRow(cat, d, i, layout) {
   const isAD = d.dealType === 'AD';
   const hasPct = cat.hasPct === true || (cat.hasPct === 'mixed' && !isAD);
-  const comm = hasPct
+  
+  // For display: if hasPct but no amount/pct (imported data), show comm directly
+  const hasAmtPct = hasPct && parseFloat(d.amount) > 0 && parseFloat(d.pct) > 0;
+  const comm = hasAmtPct
     ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100
     : (parseFloat(d.comm)||0);
 
@@ -1494,9 +1497,13 @@ function addDeal(catId, dealType) {
 
 function calcTotal(deals, hasPct) {
   return deals.reduce((s,d) => {
-    if (d.dealType === 'AD') return s + (parseFloat(d.comm)||250);
+    if (d.dealType === 'AD') return s + (parseFloat(d.comm)||0);
     if (hasPct === true || hasPct === 'mixed') {
-      return s + (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100;
+      const amt = parseFloat(d.amount)||0;
+      const pct = parseFloat(d.pct)||0;
+      // If we have amount+pct, calculate; otherwise use comm directly
+      if (amt > 0 && pct > 0) return s + amt * pct / 100;
+      return s + (parseFloat(d.comm)||0);
     }
     return s + (parseFloat(d.comm)||0);
   }, 0);
@@ -1512,8 +1519,10 @@ function setField(catId, idx, field, val) {
 }
 function recalc(catId, idx) {
   const d = getDeals(empCo, catId)[idx];
-  if (d.dealType === 'AD') return; // AD deals have fixed comm
-  const comm = (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100;
+  if (d.dealType === 'AD') return;
+  const amt = parseFloat(d.amount)||0;
+  const pct = parseFloat(d.pct)||0;
+  const comm = (amt > 0 && pct > 0) ? amt * pct / 100 : (parseFloat(d.comm)||0);
   const el = document.getElementById(`cauto-${catId}-${idx}`);
   if (el) { el.textContent = '$'+comm.toFixed(2); el.classList.toggle('zero', comm===0); }
   refreshTot(catId);
