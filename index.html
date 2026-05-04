@@ -564,21 +564,43 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
      PAGE 1: LOGIN
 ══════════════════════════════════════════ -->
 <div class="page active" id="page-login">
-  <div class="login-page">
-    <div class="login-card">
-      <div style="font-size:32px;margin-bottom:10px">📈</div>
-      <div class="login-logo">PF Payroll</div>
-      <div class="login-logo" style="font-size:18px;font-weight:500;color:var(--blue);margin-bottom:6px;letter-spacing:-.2px">Commission</div>
-      <div class="login-sub">Sign in to submit your monthly commission form</div>
+  <div class="login-page" style="flex-direction:column;gap:16px">
 
-      <div id="google-btn-container" style="margin-bottom:8px;">
-        <!-- Google SDK renders button here -->
+    <!-- System selector -->
+    <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;align-items:flex-start">
+      <!-- Payroll Commission -->
+      <div style="
+        background:var(--surface);border:2px solid var(--blue);border-radius:var(--radius-xl);
+        padding:28px 24px 24px;width:300px;text-align:center;
+        box-shadow:0 4px 20px rgba(37,99,235,.12);">
+        <div style="font-size:28px;margin-bottom:8px">📈</div>
+        <div style="font-size:17px;font-weight:700;letter-spacing:-.3px">SWS Group</div>
+        <div style="font-size:14px;font-weight:500;color:var(--blue);margin-bottom:8px">Payroll Commission</div>
+        <div style="font-size:11.5px;color:var(--ink3);margin-bottom:20px">Submit monthly commission forms</div>
+
+        <div id="google-btn-container" style="display:flex;justify-content:center;overflow:hidden;border-radius:var(--radius)">
+          <!-- Google SDK renders button here -->
+        </div>
+        <div id="login-loading" style="display:none;font-size:12px;color:var(--ink3);padding:8px">⏳ Signing in...</div>
+        <div id="login-error" style="display:none;font-size:11.5px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius);padding:8px 12px;margin-top:8px;text-align:left;"></div>
+        <div style="font-size:10.5px;color:var(--ink3);margin-top:14px;line-height:1.6">Only registered employees can access.<br>Contact Andy if you cannot log in.</div>
       </div>
-      <div id="login-loading" style="display:none;font-size:12.5px;color:var(--ink3);padding:12px;text-align:center;">⏳ Signing in...</div>
-      <div id="login-error" style="display:none;font-size:12px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius);padding:10px 14px;margin-top:10px;text-align:left;"></div>
 
-      <div class="login-note">Only registered employees can access this system.<br>Contact Andy if you cannot log in.</div>
+      <!-- HR System -->
+      <div style="
+        background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-xl);
+        padding:28px 24px 24px;width:300px;text-align:center;
+        box-shadow:0 4px 12px rgba(0,0,0,.05);">
+        <div style="font-size:28px;margin-bottom:8px">🏢</div>
+        <div style="font-size:17px;font-weight:700;letter-spacing:-.3px;color:var(--ink2)">SWS Group</div>
+        <div style="font-size:14px;font-weight:500;color:var(--ink3);margin-bottom:8px">HR System</div>
+        <div style="font-size:11.5px;color:var(--ink3);margin-bottom:20px">Leave applications & HR management</div>
+        <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--radius);font-size:12px;color:var(--ink3)">
+          🔧 Coming soon
+        </div>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -665,8 +687,8 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
     </div>
     <div class="topbar-right">
       <div class="user-pill">
-        <div class="avatar admin">A</div>
-        Andy
+        <div class="avatar admin" id="admin-avatar">A</div>
+        <span id="admin-name-display">Admin</span>
       </div>
       <button class="btn-logout" onclick="logout()">Sign out</button>
     </div>
@@ -709,19 +731,19 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
 
     <!-- Month filter -->
     <div class="month-filter">
-      <div class="mf-btn" onclick="mfSwitch(this,'All')">All Months</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Jan')">Jan</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Feb')">Feb</div>
-      <div class="mf-btn active has-data" onclick="mfSwitch(this,'Mar')">Mar</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Apr')">Apr</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'May')">May</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Jun')">Jun</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Jul')">Jul</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Aug')">Aug</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Sep')">Sep</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Oct')">Oct</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Nov')">Nov</div>
-      <div class="mf-btn" onclick="mfSwitch(this,'Dec')">Dec</div>
+      <div class="mf-btn active" onclick="adminMfSwitch(this,'All')">All Months</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Jan')">Jan</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Feb')">Feb</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Mar')">Mar</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Apr')">Apr</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'May')">May</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Jun')">Jun</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Jul')">Jul</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Aug')">Aug</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Sep')">Sep</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Oct')">Oct</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Nov')">Nov</div>
+      <div class="mf-btn" onclick="adminMfSwitch(this,'Dec')">Dec</div>
     </div>
 
     <!-- Employee table -->
@@ -940,7 +962,7 @@ function initGoogleAuth() {
   });
   google.accounts.id.renderButton(
     document.getElementById('google-btn-container'),
-    { theme:'outline', size:'large', width:308, text:'continue_with' }
+    { theme:'outline', size:'large', width:252, text:'continue_with' }
   );
 }
 
@@ -1010,9 +1032,16 @@ function enterEmployee() {
 }
 
 function enterAdmin() {
+  // Set admin name from currentUser
+  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('admin-avatar').textContent = initials;
+  document.getElementById('admin-name-display').textContent = currentUser.name;
   showPage('page-admin');
-  loadSettingsFromSheet();
   loadAdminDashboard();
+}
+
+function selectSystem(sys) {
+  // placeholder for future HR system routing
 }
 
 function logout() {
@@ -1054,9 +1083,24 @@ function adminTab(el, tab) {
   document.getElementById('admin-dashboard').style.display = tab==='dashboard' ? '' : 'none';
   document.getElementById('admin-settings').style.display  = tab==='settings'  ? '' : 'none';
 }
+let adminSelectedMonth = 'All';
+
+function adminMfSwitch(el, month) {
+  el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  adminSelectedMonth = month;
+  renderAdminDashboard();
+}
+
 function mfSwitch(el, month) {
   el.closest('.month-filter').querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
+}
+
+function showDownloadModal() {
+  const monthLabel = adminSelectedMonth === 'All' ? 'All Months' : adminSelectedMonth + ' ' + empYear;
+  document.getElementById('dl-month-label').textContent = monthLabel;
+  document.getElementById('download-options-modal').classList.add('open');
 }
 function openDetail(name) {
   const emp = settingsEmps.find(e => e.name === name) || { name, email:'', cos:['SWS','SWG','BE'] };
@@ -1482,25 +1526,57 @@ function scheduleSave() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+function getAllDataForDownload() {
+  const allData = [...adminData];
+  Object.entries(IMPORTED_DATA).forEach(([email, yearData]) => {
+    const emp = settingsEmps.find(e => e.email === email);
+    if (!emp) return;
+    Object.entries(yearData).forEach(([year, months]) => {
+      Object.entries(months).forEach(([month, companies]) => {
+        Object.entries(companies).forEach(([co, cats]) => {
+          Object.entries(cats).forEach(([cat, deals]) => {
+            deals.forEach(d => {
+              const exists = adminData.some(r =>
+                r.email===email && r.month===month && r.company===co && r.category===cat
+              );
+              if (!exists) {
+                allData.push({ name:emp.name, email, company:co, month, year, category:cat,
+                  invoice:d.invoice, date:d.date, amount:d.amount, pct:d.pct, comm:d.comm, ts:'' });
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+  return allData;
+}
+
 function downloadAll(scope) {
-  if (!adminData.length) { alert('No submitted data yet.'); return; }
-  let filtered = adminData;
+  const allData = getAllDataForDownload();
+  let filtered = allData;
   let filename = `PF_Commission_All_2026.xlsx`;
-  if (scope === 'month') {
-    filtered = adminData.filter(d => d.month === empMonth);
-    filename = `PF_Commission_${empMonth}${empYear}.xlsx`;
+  if (scope === 'month' && adminSelectedMonth !== 'All') {
+    filtered = allData.filter(d => d.month === adminSelectedMonth);
+    filename = `PF_Commission_${adminSelectedMonth}${empYear}.xlsx`;
   }
   if (!filtered.length) { alert('No data for selected period.'); return; }
-  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
-  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Build one xlsx with one sheet per employee per month
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
+  const byEmp = {};
+  filtered.forEach(d => { if(!byEmp[d.name]) byEmp[d.name]={}; if(!byEmp[d.name][d.month]) byEmp[d.name][d.month]=[]; byEmp[d.name][d.month].push(d); });
+  Object.entries(byEmp).forEach(([name, months]) => {
+    Object.entries(months).forEach(([month, data]) => {
+      const sheetName = (name.split(' ')[0]+'_'+month).slice(0,31);
+      XLSX.utils.book_append_sheet(wb, buildCTFormSheet(name, data, month), sheetName);
+    });
+  });
   XLSX.writeFile(wb, filename);
 }
 
 function showDownloadModal() {
-  document.getElementById('dl-month-label').textContent = empMonth + ' ' + empYear;
+  const label = adminSelectedMonth === 'All' ? 'All Months' : adminSelectedMonth + ' ' + empYear;
+  document.getElementById('dl-month-label').textContent = label;
   document.getElementById('download-options-modal').classList.add('open');
 }
 
@@ -1509,177 +1585,114 @@ let currentDetailMonth = 'Mar';
 
 function downloadOneMonth() {
   if (!currentDetailEmp) return;
-  const filtered = adminData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
+  const allData = getAllDataForDownload();
+  const filtered = allData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
   if (!filtered.length) { alert('No data for this employee this month.'); return; }
-  const wb = buildCTFormXlsx(currentDetailEmp.name, filtered, [currentDetailMonth]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, filtered, currentDetailMonth), currentDetailMonth);
   XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
 }
 
 function downloadOneAll() {
   if (!currentDetailEmp) return;
-  const filtered = adminData.filter(d => d.name === currentDetailEmp.name);
+  const allData = getAllDataForDownload();
+  const filtered = allData.filter(d => d.name === currentDetailEmp.name);
   if (!filtered.length) { alert('No data for this employee.'); return; }
-  const months = [...new Set(filtered.map(d=>d.month))];
-  const wb = buildCTFormXlsx(currentDetailEmp.name, filtered, months);
+  const wb = XLSX.utils.book_new();
+  const byMonth = {};
+  filtered.forEach(d => { if(!byMonth[d.month]) byMonth[d.month]=[]; byMonth[d.month].push(d); });
+  Object.entries(byMonth).forEach(([month, data]) => {
+    XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, data, month), month+' '+empYear);
+  });
   XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_All2026.xlsx`);
 }
 
 // ══════════════════════════════════════════
-// BUILD CT FORM FORMAT XLSX
-// Matches original CT Form so PF Automation can read it directly
-// Row 5: Companies (SWS col1, SWG col9, BE col17)
-// Row 6: Category | Total Commission | No.s of Deal
-// Row 7-14: Category rows with totals
-// Row 16: Total row
+// BUILD CT FORM FORMAT WORKSHEET
+// Matches original CT Form structure
 // ══════════════════════════════════════════
-function buildCTFormXlsx(empName, data, months) {
-  const wb = XLSX.utils.book_new();
+function buildCTFormSheet(empName, data, month) {
   const CATS = ['New Sales','RSVP','UpSales','Selection Fitting','Photo Selection','Car Decor','Review','Online Sales'];
   const COS = ['SWS','SWG','BE'];
-  const CO_COL = { SWS:0, SWG:8, BE:16 }; // 0-indexed col offsets (col 1,9,17 = index 0,8,16)
+  const CO_COL = { SWS:0, SWG:8, BE:16 };
 
-  months.forEach(month => {
-    const monthData = data.filter(d => d.month === month);
-
-    // Build structure: { co: { cat: { total, count } } }
-    const summary = {};
-    const details = {}; // { co: { cat: [deals] } }
-    COS.forEach(co => {
-      summary[co] = {};
-      details[co] = {};
-      CATS.forEach(cat => {
-        summary[co][cat] = { total:0, count:0 };
-        details[co][cat] = [];
-      });
-    });
-
-    monthData.forEach(d => {
-      const co = d.company;
-      const cat = d.category;
-      if (!summary[co] || !summary[co][cat]) return;
-      const comm = parseFloat(d.comm)||0;
-      summary[co][cat].total += comm;
-      if (comm > 0) summary[co][cat].count++;
-      details[co][cat].push(d);
-    });
-
-    // Create sheet data (26 cols wide, enough rows for all details)
-    // Use array of arrays
-    const TOTAL_COLS = 26;
-    const sheet = [];
-
-    // Helper to ensure row exists
-    function getRow(r) {
-      while (sheet.length <= r) sheet.push(new Array(TOTAL_COLS).fill(''));
-      return sheet[r];
-    }
-
-    // Row 0 (row 1): Title
-    getRow(0)[0] = 'Monthly Individual Comm and Incentive Format';
-    // Row 1 (row 2): Employee name
-    getRow(1)[0] = empName;
-    // Row 2 (row 3): Month/Year
-    getRow(2)[0] = `${month} ${empYear}`;
-
-    // Row 4 (row 5): Company headers
-    COS.forEach(co => {
-      const col = CO_COL[co];
-      getRow(4)[col] = co === 'SWG' ? 'Global' : co;
-    });
-
-    // Row 5 (row 6): Column headers per company
-    COS.forEach(co => {
-      const col = CO_COL[co];
-      getRow(5)[col]   = 'Category';
-      getRow(5)[col+1] = 'Total Commission';
-      getRow(5)[col+2] = 'No.s of Deal';
-    });
-
-    // Rows 6-13 (rows 7-14): Category summary
-    CATS.forEach((cat, ci) => {
-      const r = 6 + ci;
-      COS.forEach(co => {
-        const col = CO_COL[co];
-        const s = summary[co][cat];
-        getRow(r)[col]   = cat;
-        getRow(r)[col+1] = s.total > 0 ? s.total : 0;
-        getRow(r)[col+2] = s.count;
-      });
-    });
-
-    // Row 15 (row 16): Total
-    COS.forEach(co => {
-      const col = CO_COL[co];
-      const total = CATS.reduce((s,cat) => s + summary[co][cat].total, 0);
-      const count = CATS.reduce((s,cat) => s + summary[co][cat].count, 0);
-      getRow(15)[col]   = 'Total';
-      getRow(15)[col+1] = total;
-      getRow(15)[col+2] = count;
-    });
-
-    // Row 17 (row 18): Company headers again for detail section
-    COS.forEach(co => {
-      const col = CO_COL[co];
-      getRow(17)[col] = co === 'SWG' ? 'Global' : co;
-    });
-
-    // Row 18 (row 19): Detail column headers
-    COS.forEach(co => {
-      const col = CO_COL[co];
-      getRow(18)[col]   = 'Category';
-      getRow(18)[col+1] = 'No.s';
-      getRow(18)[col+2] = 'Invoice Date';
-      getRow(18)[col+3] = 'Invoice';
-      getRow(18)[col+4] = 'Amount';
-      getRow(18)[col+5] = '%';
-      getRow(18)[col+6] = 'Comm';
-    });
-
-    // Detail rows starting at row 19 (row 20)
-    // For each category, find the max deals across all companies
-    let currentRow = 19;
-    CATS.forEach(cat => {
-      const maxDeals = Math.max(...COS.map(co => details[co][cat].length));
-      if (maxDeals === 0) return;
-
-      // Category header row
-      COS.forEach(co => {
-        getRow(currentRow)[CO_COL[co]] = cat;
-      });
-      currentRow++;
-
-      // Deal rows
-      for (let i = 0; i < maxDeals; i++) {
-        COS.forEach(co => {
-          const col = CO_COL[co];
-          const deal = details[co][cat][i];
-          if (deal) {
-            const nos = i + 1;
-            getRow(currentRow)[col]   = nos;
-            getRow(currentRow)[col+1] = deal.date || '';
-            getRow(currentRow)[col+2] = deal.invoice || '';
-            getRow(currentRow)[col+3] = deal.amount ? parseFloat(deal.amount) : '';
-            getRow(currentRow)[col+4] = deal.pct ? parseFloat(deal.pct)/100 : '';
-            getRow(currentRow)[col+5] = deal.comm ? parseFloat(deal.comm) : '';
-          }
-        });
-        currentRow++;
-      }
-
-      // Total Comm row per category
-      COS.forEach(co => {
-        const col = CO_COL[co];
-        getRow(currentRow)[col]   = 'Total Comm';
-        getRow(currentRow)[col+1] = summary[co][cat].total;
-      });
-      currentRow++;
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(sheet);
-    XLSX.utils.book_append_sheet(wb, ws, month + ' ' + empYear);
+  const summary = {};
+  const details = {};
+  COS.forEach(co => {
+    summary[co] = {}; details[co] = {};
+    CATS.forEach(cat => { summary[co][cat]={total:0,count:0}; details[co][cat]=[]; });
   });
 
-  return wb;
+  data.forEach(d => {
+    const co = d.company; const cat = d.category;
+    if (!summary[co]||!summary[co][cat]) return;
+    const comm = parseFloat(d.comm)||0;
+    summary[co][cat].total += comm;
+    if (comm>0) summary[co][cat].count++;
+    details[co][cat].push(d);
+  });
+
+  const COLS = 26;
+  const sheet = [];
+  function getRow(r) { while(sheet.length<=r) sheet.push(new Array(COLS).fill('')); return sheet[r]; }
+
+  getRow(0)[0] = 'Monthly Individual Comm and Incentive Format';
+  getRow(1)[0] = empName;
+  getRow(2)[0] = `${month} ${empYear}`;
+
+  COS.forEach(co => {
+    const c = CO_COL[co];
+    getRow(4)[c] = co==='SWG'?'Global':co;
+    getRow(5)[c]='Category'; getRow(5)[c+1]='Total Commission'; getRow(5)[c+2]='No.s of Deal';
+  });
+
+  CATS.forEach((cat,ci) => {
+    const r = 6+ci;
+    COS.forEach(co => {
+      const c=CO_COL[co]; const s=summary[co][cat];
+      getRow(r)[c]=cat; getRow(r)[c+1]=s.total||0; getRow(r)[c+2]=s.count;
+    });
+  });
+
+  COS.forEach(co => {
+    const c=CO_COL[co];
+    getRow(15)[c]='Total';
+    getRow(15)[c+1]=CATS.reduce((s,cat)=>s+summary[co][cat].total,0);
+    getRow(15)[c+2]=CATS.reduce((s,cat)=>s+summary[co][cat].count,0);
+  });
+
+  COS.forEach(co => { getRow(17)[CO_COL[co]]=co==='SWG'?'Global':co; });
+  COS.forEach(co => {
+    const c=CO_COL[co];
+    getRow(18)[c]='Category'; getRow(18)[c+1]='No.s'; getRow(18)[c+2]='Invoice Date';
+    getRow(18)[c+3]='Invoice'; getRow(18)[c+4]='Amount'; getRow(18)[c+5]='%'; getRow(18)[c+6]='Comm';
+  });
+
+  let row = 19;
+  CATS.forEach(cat => {
+    const maxDeals = Math.max(...COS.map(co=>details[co][cat].length));
+    if (maxDeals===0) return;
+    COS.forEach(co => { getRow(row)[CO_COL[co]]=cat; });
+    row++;
+    for (let i=0;i<maxDeals;i++) {
+      COS.forEach(co => {
+        const c=CO_COL[co]; const d=details[co][cat][i];
+        if (d) {
+          getRow(row)[c]=i+1;
+          getRow(row)[c+1]=d.date||'';
+          getRow(row)[c+2]=d.invoice||'';
+          getRow(row)[c+3]=d.amount?parseFloat(d.amount):'';
+          getRow(row)[c+4]=d.pct?parseFloat(d.pct)/100:'';
+          getRow(row)[c+5]=d.comm?parseFloat(d.comm):'';
+        }
+      });
+      row++;
+    }
+    COS.forEach(co => { const c=CO_COL[co]; getRow(row)[c]='Total Comm'; getRow(row)[c+1]=summary[co][cat].total; });
+    row++;
+  });
+
+  return XLSX.utils.aoa_to_sheet(sheet);
 }
 
 // ══════════════════════════════════════════
@@ -1711,13 +1724,50 @@ async function loadAdminDashboard() {
 }
 
 function renderAdminDashboard() {
+  // Merge adminData (submitted) with imported data
+  const allData = [...adminData];
+
+  // Also include imported data that hasn't been submitted yet
+  Object.entries(IMPORTED_DATA).forEach(([email, yearData]) => {
+    const emp = settingsEmps.find(e => e.email === email);
+    if (!emp) return;
+    Object.entries(yearData).forEach(([year, months]) => {
+      Object.entries(months).forEach(([month, companies]) => {
+        Object.entries(companies).forEach(([co, cats]) => {
+          Object.entries(cats).forEach(([cat, deals]) => {
+            deals.forEach(d => {
+              // Only add if not already in adminData
+              const exists = adminData.some(r =>
+                r.email === email && r.month === month && r.company === co && r.category === cat
+              );
+              if (!exists) {
+                allData.push({
+                  name: emp.name, email, company: co,
+                  month, year, category: cat,
+                  invoice: d.invoice, date: d.date,
+                  amount: d.amount, pct: d.pct, comm: d.comm,
+                  ts: '', imported: true
+                });
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+
+  // Filter by selected month
+  const filtered = adminSelectedMonth === 'All'
+    ? allData
+    : allData.filter(d => d.month === adminSelectedMonth);
+
   // Group submissions by employee name
   const submittedNames = {};
-  adminData.forEach(row => {
+  filtered.forEach(row => {
     if (!submittedNames[row.name]) submittedNames[row.name] = { total:0, months:new Set(), ts:'' };
     submittedNames[row.name].total += parseFloat(row.comm)||0;
     submittedNames[row.name].months.add(row.month);
-    if (!submittedNames[row.name].ts || row.ts > submittedNames[row.name].ts) {
+    if (row.ts && (!submittedNames[row.name].ts || row.ts > submittedNames[row.name].ts)) {
       submittedNames[row.name].ts = row.ts;
     }
   });
@@ -1741,10 +1791,10 @@ function renderAdminDashboard() {
     const sub = submittedNames[emp.name];
     const hasData = !!sub;
     const total = hasData ? sub.total : 0;
-    const tsDate = hasData && sub.ts ? new Date(sub.ts).toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : '—';
+    const tsDate = hasData && sub.ts ? new Date(sub.ts).toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : (hasData ? 'Imported' : '—');
     const coTags = (emp.cos||[]).map(c=>`<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
     const badge = hasData
-      ? `<span class="status-badge badge-submitted">✓ Submitted</span>`
+      ? `<span class="status-badge badge-submitted">✓ Has Data</span>`
       : `<span class="status-badge badge-pending">○ Pending</span>`;
 
     return `<div class="emp-table-row" onclick="openDetail('${emp.name}')">
