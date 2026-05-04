@@ -735,89 +735,8 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
         <span style="text-align:right">Total Comm</span>
       </div>
 
-      <div class="emp-table-row" onclick="openDetail('Chu Hong')">
-        <div class="emp-name-cell">Chu Hong</div>
-        <div class="emp-email-cell">chuhong0222@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-swg">SWG</span>
-          <span class="co-tag tag-be">BE</span>
-        </div>
-        <div><span class="status-badge badge-submitted">✓ Submitted</span></div>
-        <div style="font-size:12px;color:var(--ink3)">Mar 28</div>
-        <div class="comm-cell-admin">$2,371.21</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('Hui Hui')">
-        <div class="emp-name-cell">Hui Hui</div>
-        <div class="emp-email-cell">pohhui1101@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-be">BE</span>
-        </div>
-        <div><span class="status-badge badge-submitted">✓ Submitted</span></div>
-        <div style="font-size:12px;color:var(--ink3)">Mar 29</div>
-        <div class="comm-cell-admin">$1,822.09</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('Anson')">
-        <div class="emp-name-cell">Anson</div>
-        <div class="emp-email-cell">ans8680@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-swg">SWG</span>
-        </div>
-        <div><span class="status-badge badge-submitted">✓ Submitted</span></div>
-        <div style="font-size:12px;color:var(--ink3)">Mar 31</div>
-        <div class="comm-cell-admin">$2,628.20</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('Nelson')">
-        <div class="emp-name-cell">Nelson</div>
-        <div class="emp-email-cell">nelson.xien2809@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-be">BE</span>
-          <span class="co-tag tag-swg">SWG</span>
-        </div>
-        <div><span class="status-badge badge-draft">● Draft</span></div>
-        <div style="font-size:12px;color:var(--ink3)">—</div>
-        <div class="comm-cell-admin zero">—</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('Choo')">
-        <div class="emp-name-cell">Choo</div>
-        <div class="emp-email-cell">chooesyuen@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-be">BE</span>
-        </div>
-        <div><span class="status-badge badge-pending">○ Pending</span></div>
-        <div style="font-size:12px;color:var(--ink3)">—</div>
-        <div class="comm-cell-admin zero">—</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('LYB')">
-        <div class="emp-name-cell">LYB</div>
-        <div class="emp-email-cell">leeyeokmin@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-        </div>
-        <div><span class="status-badge badge-pending">○ Pending</span></div>
-        <div style="font-size:12px;color:var(--ink3)">—</div>
-        <div class="comm-cell-admin zero">—</div>
-      </div>
-
-      <div class="emp-table-row" onclick="openDetail('Nelson')">
-        <div class="emp-name-cell">Nelson</div>
-        <div class="emp-email-cell">nelson.xien2809@gmail.com</div>
-        <div class="co-tags">
-          <span class="co-tag tag-sws">SWS</span>
-          <span class="co-tag tag-swg">SWG</span>
-        </div>
-        <div><span class="status-badge badge-pending">○ Pending</span></div>
-        <div style="font-size:12px;color:var(--ink3)">—</div>
-        <div class="comm-cell-admin zero">—</div>
+      <div id="emp-table-body">
+        <div style="padding:24px;text-align:center;color:var(--ink3);font-size:12.5px;">Loading employees...</div>
       </div>
     </div>
   </div>
@@ -1413,7 +1332,7 @@ function renderEmp() {
         ${cat.hasPct === 'mixed'
           ? `<div style="display:flex;gap:0;border-top:1px dashed var(--line2)">
                <div class="add-row" style="flex:1;border-top:none" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add Normal Deal (% comm)</div>
-               <div class="add-row" style="flex:1;border-top:none;border-left:1px dashed var(--line2);color:var(--amber)" onclick="addDeal('${cat.id}','AD')"><span style="font-size:16px;font-weight:300">+</span> Add AD Deal ($250 fixed)</div>
+               <div class="add-row" style="flex:1;border-top:none;border-left:1px dashed var(--line2);color:var(--amber)" onclick="addDeal('${cat.id}','AD')"><span style="font-size:16px;font-weight:300">+</span> AD / PG Job (Photographer only)</div>
              </div>`
           : `<div class="add-row" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add deal</div>`
         }
@@ -1452,14 +1371,13 @@ function buildRow(cat, d, i, layout) {
       <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
     </div>`;
   } else if (isAD) {
-    // AD deal: fixed $250, no % column, comm is fixed
-    const adComm = parseFloat(d.comm)||250;
+    // AD / PG Job: same as regular no-pct, employee fills amount and comm
     return `<div class="deal-row layout-nopct" style="background:var(--amber-bg)">
-      <div class="row-n" style="background:var(--amber-bg);color:var(--amber);font-weight:600">AD</div>
+      <div class="row-n" style="background:var(--amber-bg);color:var(--amber);font-weight:700;font-size:9px;letter-spacing:.3px">PG</div>
       <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
       <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
-      <input type="number" value="${d.amount||''}" placeholder="Contract Amt" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
-      <div class="comm-auto" style="background:var(--amber-bg);border-color:#fde68a;color:var(--amber)">$${adComm.toFixed(2)}</div>
+      <input type="number" value="${d.amount||''}" placeholder="0.00" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
+      <input type="number" value="${d.comm||''}" placeholder="Comm $" min="0" step="0.01" style="border-color:#fde68a" oninput="setField('${cat.id}',${i},'comm',this.value);refreshTot('${cat.id}')">
       <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
     </div>`;
   } else {
@@ -1564,45 +1482,6 @@ function scheduleSave() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// ══════════════════════════════════════════
-// ADMIN DASHBOARD — load real data
-// ══════════════════════════════════════════
-async function loadAdminDashboard() {
-  try {
-    const result = await apiCall({
-      action: 'adminGetAll',
-      month: empMonth,
-      year: empYear,
-      requestEmail: currentUser.email
-    });
-    if (result.data) {
-      adminData = result.data;
-      renderAdminDashboard(adminData);
-    }
-  } catch(e) {
-    console.log('Admin load error:', e);
-  }
-}
-
-function renderAdminDashboard(data) {
-  // Group by employee+company
-  const grouped = {};
-  data.forEach(row => {
-    const key = row.name + '|' + row.company;
-    if (!grouped[key]) grouped[key] = { name:row.name, email:row.email, company:row.company, month:row.month, year:row.year, total:0, deals:[] };
-    grouped[key].total += parseFloat(row.comm)||0;
-    grouped[key].deals.push(row);
-  });
-  // Update stats
-  const entries = Object.values(grouped);
-  const grandTotal = entries.reduce((s,e)=>s+e.total,0);
-  document.querySelector('.stat-val.green').textContent = entries.length;
-  document.querySelector('.stat-val.blue:last-child, .stat-val.blue + .stat-val + .stat-val + .stat-val .stat-val')
-  // Update grand total display
-  const statCards = document.querySelectorAll('.stat-card');
-  if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = '$'+grandTotal.toFixed(2);
-}
-
 function downloadAll(scope) {
   if (!adminData.length) { alert('No submitted data yet.'); return; }
   let filtered = adminData;
@@ -1632,24 +1511,175 @@ function downloadOneMonth() {
   if (!currentDetailEmp) return;
   const filtered = adminData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
   if (!filtered.length) { alert('No data for this employee this month.'); return; }
-  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
-  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, currentDetailMonth);
-  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(' ','_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
+  const wb = buildCTFormXlsx(currentDetailEmp.name, filtered, [currentDetailMonth]);
+  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
 }
 
 function downloadOneAll() {
   if (!currentDetailEmp) return;
   const filtered = adminData.filter(d => d.name === currentDetailEmp.name);
   if (!filtered.length) { alert('No data for this employee.'); return; }
-  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
-  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const months = [...new Set(filtered.map(d=>d.month))];
+  const wb = buildCTFormXlsx(currentDetailEmp.name, filtered, months);
+  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_All2026.xlsx`);
+}
+
+// ══════════════════════════════════════════
+// BUILD CT FORM FORMAT XLSX
+// Matches original CT Form so PF Automation can read it directly
+// Row 5: Companies (SWS col1, SWG col9, BE col17)
+// Row 6: Category | Total Commission | No.s of Deal
+// Row 7-14: Category rows with totals
+// Row 16: Total row
+// ══════════════════════════════════════════
+function buildCTFormXlsx(empName, data, months) {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, currentDetailEmp.name);
-  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(' ','_')}_CT_All2026.xlsx`);
+  const CATS = ['New Sales','RSVP','UpSales','Selection Fitting','Photo Selection','Car Decor','Review','Online Sales'];
+  const COS = ['SWS','SWG','BE'];
+  const CO_COL = { SWS:0, SWG:8, BE:16 }; // 0-indexed col offsets (col 1,9,17 = index 0,8,16)
+
+  months.forEach(month => {
+    const monthData = data.filter(d => d.month === month);
+
+    // Build structure: { co: { cat: { total, count } } }
+    const summary = {};
+    const details = {}; // { co: { cat: [deals] } }
+    COS.forEach(co => {
+      summary[co] = {};
+      details[co] = {};
+      CATS.forEach(cat => {
+        summary[co][cat] = { total:0, count:0 };
+        details[co][cat] = [];
+      });
+    });
+
+    monthData.forEach(d => {
+      const co = d.company;
+      const cat = d.category;
+      if (!summary[co] || !summary[co][cat]) return;
+      const comm = parseFloat(d.comm)||0;
+      summary[co][cat].total += comm;
+      if (comm > 0) summary[co][cat].count++;
+      details[co][cat].push(d);
+    });
+
+    // Create sheet data (26 cols wide, enough rows for all details)
+    // Use array of arrays
+    const TOTAL_COLS = 26;
+    const sheet = [];
+
+    // Helper to ensure row exists
+    function getRow(r) {
+      while (sheet.length <= r) sheet.push(new Array(TOTAL_COLS).fill(''));
+      return sheet[r];
+    }
+
+    // Row 0 (row 1): Title
+    getRow(0)[0] = 'Monthly Individual Comm and Incentive Format';
+    // Row 1 (row 2): Employee name
+    getRow(1)[0] = empName;
+    // Row 2 (row 3): Month/Year
+    getRow(2)[0] = `${month} ${empYear}`;
+
+    // Row 4 (row 5): Company headers
+    COS.forEach(co => {
+      const col = CO_COL[co];
+      getRow(4)[col] = co === 'SWG' ? 'Global' : co;
+    });
+
+    // Row 5 (row 6): Column headers per company
+    COS.forEach(co => {
+      const col = CO_COL[co];
+      getRow(5)[col]   = 'Category';
+      getRow(5)[col+1] = 'Total Commission';
+      getRow(5)[col+2] = 'No.s of Deal';
+    });
+
+    // Rows 6-13 (rows 7-14): Category summary
+    CATS.forEach((cat, ci) => {
+      const r = 6 + ci;
+      COS.forEach(co => {
+        const col = CO_COL[co];
+        const s = summary[co][cat];
+        getRow(r)[col]   = cat;
+        getRow(r)[col+1] = s.total > 0 ? s.total : 0;
+        getRow(r)[col+2] = s.count;
+      });
+    });
+
+    // Row 15 (row 16): Total
+    COS.forEach(co => {
+      const col = CO_COL[co];
+      const total = CATS.reduce((s,cat) => s + summary[co][cat].total, 0);
+      const count = CATS.reduce((s,cat) => s + summary[co][cat].count, 0);
+      getRow(15)[col]   = 'Total';
+      getRow(15)[col+1] = total;
+      getRow(15)[col+2] = count;
+    });
+
+    // Row 17 (row 18): Company headers again for detail section
+    COS.forEach(co => {
+      const col = CO_COL[co];
+      getRow(17)[col] = co === 'SWG' ? 'Global' : co;
+    });
+
+    // Row 18 (row 19): Detail column headers
+    COS.forEach(co => {
+      const col = CO_COL[co];
+      getRow(18)[col]   = 'Category';
+      getRow(18)[col+1] = 'No.s';
+      getRow(18)[col+2] = 'Invoice Date';
+      getRow(18)[col+3] = 'Invoice';
+      getRow(18)[col+4] = 'Amount';
+      getRow(18)[col+5] = '%';
+      getRow(18)[col+6] = 'Comm';
+    });
+
+    // Detail rows starting at row 19 (row 20)
+    // For each category, find the max deals across all companies
+    let currentRow = 19;
+    CATS.forEach(cat => {
+      const maxDeals = Math.max(...COS.map(co => details[co][cat].length));
+      if (maxDeals === 0) return;
+
+      // Category header row
+      COS.forEach(co => {
+        getRow(currentRow)[CO_COL[co]] = cat;
+      });
+      currentRow++;
+
+      // Deal rows
+      for (let i = 0; i < maxDeals; i++) {
+        COS.forEach(co => {
+          const col = CO_COL[co];
+          const deal = details[co][cat][i];
+          if (deal) {
+            const nos = i + 1;
+            getRow(currentRow)[col]   = nos;
+            getRow(currentRow)[col+1] = deal.date || '';
+            getRow(currentRow)[col+2] = deal.invoice || '';
+            getRow(currentRow)[col+3] = deal.amount ? parseFloat(deal.amount) : '';
+            getRow(currentRow)[col+4] = deal.pct ? parseFloat(deal.pct)/100 : '';
+            getRow(currentRow)[col+5] = deal.comm ? parseFloat(deal.comm) : '';
+          }
+        });
+        currentRow++;
+      }
+
+      // Total Comm row per category
+      COS.forEach(co => {
+        const col = CO_COL[co];
+        getRow(currentRow)[col]   = 'Total Comm';
+        getRow(currentRow)[col+1] = summary[co][cat].total;
+      });
+      currentRow++;
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheet);
+    XLSX.utils.book_append_sheet(wb, ws, month + ' ' + empYear);
+  });
+
+  return wb;
 }
 
 // ══════════════════════════════════════════
@@ -1658,18 +1688,109 @@ function downloadOneAll() {
 const IMPORTED_DATA = {"sw999.ba@gmail.com":{"2026":{"Feb":{"SWS":{"Selection Fitting":[{"invoice":"88234","date":"2026-02-14","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"66706","date":"2026-02-26","amount":"20.0","pct":"","comm":"20.0"},{"invoice":"66776","date":"2026-02-27","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"88052","date":"2026-02-27","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"140.0"}],"Car Decor":[{"invoice":"88053","date":"2026-02-12","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66724","date":"2026-02-13","amount":"","pct":"","comm":"7.5"},{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"66690","date":"2026-03-02","amount":"","pct":"","comm":"30.0"},{"invoice":"66416","date":"2026-03-02","amount":"","pct":"","comm":"30.0"},{"invoice":"66895","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66891","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66721","date":"2026-03-22","amount":"","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"66854","date":"2026-03-20","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66869","date":"2026-03-20","amount":"","pct":"","comm":"7.5"},{"invoice":"66857","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66707","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"67.5"}]},"BE":{"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Car Decor":[{"invoice":"88569","date":"2026-03-20","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"88211","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"}]}}}},"sw999.sales@gmail.com":{"2026":{"Feb":{"SWS":{"Selection Fitting":[{"invoice":"66873","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66765","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66878","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66709","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"120.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"7.5"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]},"SWG":{"Selection Fitting":[{"invoice":"88143","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"88104","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"88228","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88016","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88212","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88506","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88302","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88227","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88500","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"260.0"}],"Online Sales":[{"invoice":"88546","date":"","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88551","date":"","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"66846","date":"2026-03-03","amount":"","pct":"","comm":"30.0"},{"invoice":"66900","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66849","date":"2026-03-16","amount":"","pct":"","comm":"20.0"},{"invoice":"66876","date":"2026-03-16","amount":"","pct":"","comm":"20.0"},{"invoice":"66911","date":"2026-03-18","amount":"","pct":"","comm":"20.0"},{"invoice":"66775","date":"2026-03-27","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"66869","date":"2026-03-20","amount":"","pct":"","comm":"7.5"},{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]},"BE":{"Selection Fitting":[{"invoice":"88501","date":"2026-03-04","amount":"","pct":"","comm":"20.0"},{"invoice":"88182","date":"2026-03-05","amount":"","pct":"","comm":"30.0"},{"invoice":"88279","date":"2026-03-11","amount":"","pct":"","comm":"30.0"},{"invoice":"88503","date":"2026-03-12","amount":"","pct":"","comm":"20.0"},{"invoice":"88024","date":"2026-03-12","amount":"","pct":"","comm":"30.0"},{"invoice":"88151","date":"2026-03-26","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"170.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Online Sales":[{"invoice":"88566","date":"2026-03-04","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88570","date":"2026-03-06","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88599","date":"2026-03-16","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88601","date":"2026-03-18","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88610","date":"2026-03-26","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88612","date":"2026-03-26","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"105.0"}]}}}},"sw999.pg1@gmail.com":{"2026":{"Feb":{"SWS":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"183.8"}]}},"Mar":{"BE":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"106.9"}]}}}},"sw999.pg2@gmail.com":{"2026":{"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"194.4"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"250.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]}}}}};
 
 // ══════════════════════════════════════════
-// SETTINGS
+// ADMIN DASHBOARD — render with real employee list
+// ══════════════════════════════════════════
+async function loadAdminDashboard() {
+  // Load submissions
+  try {
+    const result = await apiCall({
+      action: 'adminGetAll',
+      month: '',
+      year: empYear,
+      requestEmail: currentUser.email
+    });
+    if (result.data) {
+      adminData = result.data;
+    }
+  } catch(e) {
+    console.log('Admin load error:', e);
+  }
+  // Load employees then render dashboard
+  await loadSettingsFromSheet();
+  renderAdminDashboard();
+}
+
+function renderAdminDashboard() {
+  // Group submissions by employee name
+  const submittedNames = {};
+  adminData.forEach(row => {
+    if (!submittedNames[row.name]) submittedNames[row.name] = { total:0, months:new Set(), ts:'' };
+    submittedNames[row.name].total += parseFloat(row.comm)||0;
+    submittedNames[row.name].months.add(row.month);
+    if (!submittedNames[row.name].ts || row.ts > submittedNames[row.name].ts) {
+      submittedNames[row.name].ts = row.ts;
+    }
+  });
+
+  const submitted = Object.keys(submittedNames).length;
+  const pending = settingsEmps.filter(e => !submittedNames[e.name]).length;
+  const grandTotal = Object.values(submittedNames).reduce((s,e)=>s+e.total,0);
+
+  // Update stat cards
+  const statCards = document.querySelectorAll('.stat-card');
+  if (statCards[0]) statCards[0].querySelector('.stat-val').textContent = settingsEmps.length;
+  if (statCards[1]) statCards[1].querySelector('.stat-val').textContent = submitted;
+  if (statCards[2]) statCards[2].querySelector('.stat-val').textContent = pending;
+  if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = '$'+grandTotal.toFixed(2);
+
+  // Render employee table
+  const tableBody = document.getElementById('emp-table-body');
+  if (!tableBody) return;
+
+  tableBody.innerHTML = settingsEmps.map(emp => {
+    const sub = submittedNames[emp.name];
+    const hasData = !!sub;
+    const total = hasData ? sub.total : 0;
+    const tsDate = hasData && sub.ts ? new Date(sub.ts).toLocaleDateString('en-SG',{day:'numeric',month:'short'}) : '—';
+    const coTags = (emp.cos||[]).map(c=>`<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
+    const badge = hasData
+      ? `<span class="status-badge badge-submitted">✓ Submitted</span>`
+      : `<span class="status-badge badge-pending">○ Pending</span>`;
+
+    return `<div class="emp-table-row" onclick="openDetail('${emp.name}')">
+      <div class="emp-name-cell">${emp.name}</div>
+      <div class="emp-email-cell">${emp.email}</div>
+      <div class="co-tags">${coTags}</div>
+      <div>${badge}</div>
+      <div style="font-size:12px;color:var(--ink3)">${tsDate}</div>
+      <div class="comm-cell-admin ${total===0?'zero':''}">
+        ${total>0 ? '$'+total.toFixed(2) : '—'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// SETTINGS — load from Google Sheet
 // ══════════════════════════════════════════
 const ALL_COS = ['SWS','SWG','BE','SS','LOL','BJ','MB'];
 let settingsEmps = [];
 
 async function loadSettingsFromSheet() {
-  settingsEmps = [
-    { email:'sw999.ba@gmail.com',    name:'Chu Hong', cos:['SWS','SWG','BE'] },
-    { email:'sw999.sales@gmail.com', name:'Hui Hui',  cos:['SWS','SWG','BE'] },
-    { email:'sw999.pg1@gmail.com',   name:'Anson',    cos:['SWS','SWG','BE'] },
-    { email:'sw999.pg2@gmail.com',   name:'Nelson',   cos:['SWS','SWG','BE'] },
-  ];
+  try {
+    const result = await apiCall({
+      action: 'getEmployees',
+      requestEmail: currentUser.email
+    });
+    if (result.employees && result.employees.length > 0) {
+      settingsEmps = result.employees;
+    } else {
+      // fallback
+      settingsEmps = [
+        { email:'sw999.ba@gmail.com',    name:'Ng Chu Hong',      cos:['SWS','SWG','BE'] },
+        { email:'sw999.sales@gmail.com', name:'Tan Poh Hui',      cos:['SWS','SWG','BE'] },
+        { email:'sw999.pg1@gmail.com',   name:'Choi Shih Seng',   cos:['SWS','SWG','BE'] },
+        { email:'sw999.pg2@gmail.com',   name:'Choong Chun Xien', cos:['SWS','SWG','BE'] },
+      ];
+    }
+  } catch(e) {
+    settingsEmps = [
+      { email:'sw999.ba@gmail.com',    name:'Ng Chu Hong',      cos:['SWS','SWG','BE'] },
+      { email:'sw999.sales@gmail.com', name:'Tan Poh Hui',      cos:['SWS','SWG','BE'] },
+      { email:'sw999.pg1@gmail.com',   name:'Choi Shih Seng',   cos:['SWS','SWG','BE'] },
+      { email:'sw999.pg2@gmail.com',   name:'Choong Chun Xien', cos:['SWS','SWG','BE'] },
+    ];
+  }
   renderSettings();
 }
 
@@ -1678,7 +1799,11 @@ async function saveEmployees() {
   btn.textContent = '⏳ Saving...';
   btn.disabled = true;
   try {
-    await apiPost({ action:'saveEmployees', data: settingsEmps });
+    await apiPost({
+      action: 'saveEmployees',
+      data: settingsEmps,
+      requestEmail: currentUser.email
+    });
     document.getElementById('settings-success').style.display = 'block';
     document.getElementById('settings-error').style.display = 'none';
     setTimeout(() => document.getElementById('settings-success').style.display='none', 3000);
