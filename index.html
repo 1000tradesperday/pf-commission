@@ -1624,168 +1624,192 @@ async function downloadSelected() {
   if (dlSelected.size === 0) { alert('Please select at least one employee.'); return; }
   const statusEl = document.getElementById('dl-status');
   statusEl.style.display = 'block';
+  statusEl.style.color = 'var(--amber)';
 
   const allData = getAllDataForDownload();
   const selected = [...dlSelected].map(i => settingsEmps[i]);
 
-  // Download one by one
   for (const emp of selected) {
     statusEl.textContent = `⏳ Generating ${emp.name}...`;
+    await new Promise(r => setTimeout(r, 50));
     const subs = allData.filter(d => d.name === emp.name);
-    await generateAndDownloadCTForm(emp.name, emp.email, subs);
-    await new Promise(r => setTimeout(r, 1000)); // small delay between downloads
+    generateAndDownloadCTForm(emp.name, subs);
+    await new Promise(r => setTimeout(r, 300));
   }
 
   statusEl.textContent = '✓ All done!';
   statusEl.style.color = 'var(--green)';
-  setTimeout(() => { closeModal('download-options-modal'); statusEl.style.color='var(--amber)'; dlSelected.clear(); }, 1500);
+  setTimeout(() => {
+    closeModal('download-options-modal');
+    statusEl.style.color = 'var(--amber)';
+    dlSelected.clear();
+  }, 1500);
 }
 
-async function generateAndDownloadCTForm(empName, empEmail, subs) {
-  try {
-    const result = await apiCall({
-      action: 'generateCTForm',
-      empName: empName,
-      year: empYear,
-      requestEmail: currentUser.email
-    });
-    if (result.downloadUrl) {
-      const a = document.createElement('a');
-      a.href = result.downloadUrl;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      alert('Error generating CT Form for ' + empName + ': ' + (result.error || 'Unknown error'));
-    }
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
+function generateAndDownloadCTForm(empName, subs) {
+  const wb = XLSX.utils.book_new();
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  MONTHS.forEach(month => {
+    const monthData = subs.filter(d => d.month === month);
+    const ws = buildCTFormSheet(empName, monthData, month);
+    XLSX.utils.book_append_sheet(wb, ws, month + ' ' + empYear);
+  });
+
+  XLSX.writeFile(wb, empName.replace(/ /g,'_') + '_CT_' + empYear + '.xlsx');
 }
 
 // ── Individual employee download ──
 let currentDetailEmp = null;
 let currentDetailMonth = 'Mar';
 
-async function downloadOneMonth() {
+function downloadOneMonth() {
   if (!currentDetailEmp) return;
   const allData = getAllDataForDownload();
   const subs = allData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
   if (!subs.length) { alert('No data for this employee this month.'); return; }
-
-  const btn = event.target;
-  btn.textContent = '⏳...';
-  btn.disabled = true;
-
-  await generateAndDownloadCTForm(currentDetailEmp.name, currentDetailEmp.email, subs);
-
-  btn.textContent = '⬇ This Month';
-  btn.disabled = false;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildCTFormSheet(currentDetailEmp.name, subs, currentDetailMonth), currentDetailMonth + ' ' + empYear);
+  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(/ /g,'_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
 }
 
-async function downloadOneAll() {
+function downloadOneAll() {
   if (!currentDetailEmp) return;
   const allData = getAllDataForDownload();
   const subs = allData.filter(d => d.name === currentDetailEmp.name);
   if (!subs.length) { alert('No data for this employee.'); return; }
-
-  const btn = event.target;
-  btn.textContent = '⏳...';
-  btn.disabled = true;
-
-  await generateAndDownloadCTForm(currentDetailEmp.name, currentDetailEmp.email, subs);
-
-  btn.textContent = '⬇ All Months';
-  btn.disabled = false;
+  generateAndDownloadCTForm(currentDetailEmp.name, subs);
 }
 
-function showDownloadModal_unused() {} // kept for reference
-function downloadAll(scope) {} // kept for reference
-
 // ══════════════════════════════════════════
-// BUILD CT FORM FORMAT WORKSHEET
-// Matches original CT Form structure
+// ══════════════════════════════════════════
+// BUILD CT FORM — matches ct.js reading logic exactly
+// ct.js reads: catCol+5='Total Comm', catCol+6=value
+// Company blocks at col 1,9,17 (0-indexed: 0,8,16)
 // ══════════════════════════════════════════
 function buildCTFormSheet(empName, data, month) {
   const CATS = ['New Sales','RSVP','UpSales','Selection Fitting','Photo Selection','Car Decor','Review','Online Sales'];
+  const CAT_LONG = {
+    'New Sales': 'New Sales\n5% of total revenue\n(max. 2 pax share)\n\n**at least take 50% deposit then end of the month will receive the comm\n** if lesser than 50% deposit, comm will be only received after 50% deposit paid',
+    'Online Sales': 'Online Sales/\nAccessories'
+  };
   const COS = ['SWS','SWG','BE'];
+  // 0-indexed: SWS starts col 0, SWG col 8, BE col 16
   const CO_COL = { SWS:0, SWG:8, BE:16 };
+  const CO_DISPLAY = { SWS:'SWS', SWG:'Global', BE:'BE' };
 
+  // Build summary and detail data
   const summary = {};
   const details = {};
   COS.forEach(co => {
-    summary[co] = {}; details[co] = {};
-    CATS.forEach(cat => { summary[co][cat]={total:0,count:0}; details[co][cat]=[]; });
+    summary[co] = {};
+    details[co] = {};
+    CATS.forEach(cat => {
+      summary[co][cat] = { total:0, count:0 };
+      details[co][cat] = [];
+    });
   });
-
   data.forEach(d => {
     const co = d.company; const cat = d.category;
-    if (!summary[co]||!summary[co][cat]) return;
+    if (!summary[co] || !summary[co][cat]) return;
     const comm = parseFloat(d.comm)||0;
     summary[co][cat].total += comm;
-    if (comm>0) summary[co][cat].count++;
+    if (comm > 0) summary[co][cat].count++;
     details[co][cat].push(d);
   });
 
-  const COLS = 26;
+  const TOTAL_COLS = 26;
   const sheet = [];
-  function getRow(r) { while(sheet.length<=r) sheet.push(new Array(COLS).fill('')); return sheet[r]; }
+  function getRow(r) {
+    while (sheet.length <= r) sheet.push(new Array(TOTAL_COLS).fill(''));
+    return sheet[r];
+  }
 
+  // ── Row 0 (row 1): Title
   getRow(0)[0] = 'Monthly Individual Comm and Incentive Format';
+  // ── Row 1 (row 2): Employee name
   getRow(1)[0] = empName;
-  getRow(2)[0] = `${month} ${empYear}`;
+  // ── Row 2 (row 3): Month/Year
+  getRow(2)[0] = `${month},${empYear}`;
 
+  // ── Summary section (rows 4-15) ──
   COS.forEach(co => {
     const c = CO_COL[co];
-    getRow(4)[c] = co==='SWG'?'Global':co;
-    getRow(5)[c]='Category'; getRow(5)[c+1]='Total Commission'; getRow(5)[c+2]='No.s of Deal';
-  });
-
-  CATS.forEach((cat,ci) => {
-    const r = 6+ci;
-    COS.forEach(co => {
-      const c=CO_COL[co]; const s=summary[co][cat];
-      getRow(r)[c]=cat; getRow(r)[c+1]=s.total||0; getRow(r)[c+2]=s.count;
+    // Row 4 (row 5): Company name
+    getRow(4)[c] = CO_DISPLAY[co];
+    // Row 5 (row 6): Headers
+    getRow(5)[c]   = 'Category';
+    getRow(5)[c+1] = 'Total Commission';
+    getRow(5)[c+2] = 'No.s of Deal';
+    // Rows 6-13 (rows 7-14): Categories
+    CATS.forEach((cat, ci) => {
+      const r = 6 + ci;
+      const s = summary[co][cat];
+      getRow(r)[c]   = cat;
+      getRow(r)[c+1] = s.total || 0;
+      getRow(r)[c+2] = s.count;
     });
+    // Row 15 (row 16): Total
+    getRow(15)[c]   = 'Total';
+    getRow(15)[c+1] = CATS.reduce((s,cat) => s + summary[co][cat].total, 0);
+    getRow(15)[c+2] = CATS.reduce((s,cat) => s + summary[co][cat].count, 0);
   });
 
+  // ── Detail section ──
+  // Row 17 (row 18): Company headers again
+  COS.forEach(co => { getRow(17)[CO_COL[co]] = CO_DISPLAY[co]; });
+
+  // Row 18 (row 19): Column headers
+  // catCol+0=Category, +1=No.s, +2=Invoice Date, +3=Invoice, +4=Amount, +5=%, +6=Comm
   COS.forEach(co => {
-    const c=CO_COL[co];
-    getRow(15)[c]='Total';
-    getRow(15)[c+1]=CATS.reduce((s,cat)=>s+summary[co][cat].total,0);
-    getRow(15)[c+2]=CATS.reduce((s,cat)=>s+summary[co][cat].count,0);
+    const c = CO_COL[co];
+    getRow(18)[c]   = 'Category';
+    getRow(18)[c+1] = 'No.s';
+    getRow(18)[c+2] = 'Invoice Date';
+    getRow(18)[c+3] = 'Invoice';
+    getRow(18)[c+4] = 'Amount';
+    getRow(18)[c+5] = '%';
+    getRow(18)[c+6] = 'Comm';
   });
 
-  COS.forEach(co => { getRow(17)[CO_COL[co]]=co==='SWG'?'Global':co; });
-  COS.forEach(co => {
-    const c=CO_COL[co];
-    getRow(18)[c]='Category'; getRow(18)[c+1]='No.s'; getRow(18)[c+2]='Invoice Date';
-    getRow(18)[c+3]='Invoice'; getRow(18)[c+4]='Amount'; getRow(18)[c+5]='%'; getRow(18)[c+6]='Comm';
-  });
-
-  let row = 19;
+  // Detail rows per category
+  let currentRow = 19;
   CATS.forEach(cat => {
-    const maxDeals = Math.max(...COS.map(co=>details[co][cat].length));
-    if (maxDeals===0) return;
-    COS.forEach(co => { getRow(row)[CO_COL[co]]=cat; });
-    row++;
-    for (let i=0;i<maxDeals;i++) {
+    const maxDeals = Math.max(...COS.map(co => details[co][cat].length), 5);
+    const catLabel = CAT_LONG[cat] || cat;
+
+    // Category label row (merged across deal rows in original, here just first row)
+    COS.forEach(co => {
+      getRow(currentRow)[CO_COL[co]] = catLabel;
+    });
+
+    // Deal rows
+    for (let i = 0; i < maxDeals; i++) {
+      const row = currentRow + 1 + i;
       COS.forEach(co => {
-        const c=CO_COL[co]; const d=details[co][cat][i];
-        if (d) {
-          getRow(row)[c]=i+1;
-          getRow(row)[c+1]=d.date||'';
-          getRow(row)[c+2]=d.invoice||'';
-          getRow(row)[c+3]=d.amount?parseFloat(d.amount):'';
-          getRow(row)[c+4]=d.pct?parseFloat(d.pct)/100:'';
-          getRow(row)[c+5]=d.comm?parseFloat(d.comm):'';
-        }
+        const c = CO_COL[co];
+        const deal = details[co][cat][i] || {};
+
+        getRow(row)[c+1] = i + 1;                                          // No.s
+        getRow(row)[c+2] = deal.date || '';                                 // Invoice Date
+        getRow(row)[c+3] = deal.invoice || '';                              // Invoice
+        getRow(row)[c+4] = deal.amount ? parseFloat(deal.amount) : '';     // Amount
+        // col+5 = % — ct.js looks for 'Total Comm' here on total row
+        getRow(row)[c+5] = deal.pct ? parseFloat(deal.pct)/100 : '';       // %
+        getRow(row)[c+6] = deal.comm ? parseFloat(deal.comm) : '';         // Comm
       });
-      row++;
     }
-    COS.forEach(co => { const c=CO_COL[co]; getRow(row)[c]='Total Comm'; getRow(row)[c+1]=summary[co][cat].total; });
-    row++;
+
+    // Total Comm row — ct.js reads: catCol+5='Total Comm', catCol+6=value
+    const tcRow = currentRow + 1 + maxDeals;
+    COS.forEach(co => {
+      const c = CO_COL[co];
+      const total = summary[co][cat].total;
+      getRow(tcRow)[c+5] = 'Total Comm';   // catCol+5
+      getRow(tcRow)[c+6] = total;          // catCol+6
+    });
+
+    currentRow = tcRow + 1;
   });
 
   return XLSX.utils.aoa_to_sheet(sheet);
