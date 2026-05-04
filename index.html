@@ -578,30 +578,6 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
       <div id="login-error" style="display:none;font-size:12px;color:var(--red);background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius);padding:10px 14px;margin-top:10px;text-align:left;"></div>
 
       <div class="login-note">Only registered employees can access this system.<br>Contact Andy if you cannot log in.</div>
-
-      <!-- Preview only — hidden in production -->
-      <div id="preview-section">
-        <div class="login-divider"><span>Preview only</span></div>
-        <div class="demo-btns">
-          <button class="demo-btn" onclick="loginAs('admin')">
-            <div class="demo-avatar admin" style="background:#7c3aed">A</div>
-            <div style="text-align:left">
-              <div style="font-size:13px;font-weight:600;color:var(--ink)">Andy (Admin)</div>
-              <div style="font-size:11px;color:var(--ink3)">Preview admin panel</div>
-            </div>
-          </button>
-          <button class="demo-btn" onclick="loginAs('chuhong')">
-            <div class="demo-avatar" style="background:#2563eb">CH</div>
-            <div style="text-align:left">
-              <div style="font-size:13px;font-weight:600;color:var(--ink)">Chu Hong</div>
-              <div style="font-size:11px;color:var(--ink3)">Preview employee form</div>
-            </div>
-          </button>
-        </div>
-        <div style="font-size:10.5px;color:var(--ink3);margin-top:10px;padding:8px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius)">
-          ⚠️ Preview buttons are removed when connected to Google OAuth
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -708,7 +684,7 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
         <div class="sec-title">Submission Overview</div>
         <div class="sec-sub">Track who has submitted their commission forms</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="downloadAll()">⬇ Download All (.xlsx)</button>
+      <button class="btn btn-primary btn-sm" onclick="showDownloadModal()">⬇ Download</button>
     </div>
 
     <!-- Stats -->
@@ -851,15 +827,21 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
     <div class="sec-header">
       <div>
         <div class="sec-title">Employee Management</div>
-        <div class="sec-sub">Manage employee emails, names and company access</div>
+        <div class="sec-sub">Manage employee emails, names and company access. Changes sync to Google Sheet.</div>
       </div>
+      <button class="btn btn-primary" onclick="saveEmployees()">💾 Save Changes</button>
     </div>
+
+    <div id="settings-success" style="display:none;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--radius);padding:10px 16px;font-size:12.5px;font-weight:500;margin-bottom:14px;">
+      ✓ Changes saved successfully to Google Sheet
+    </div>
+    <div id="settings-error" style="display:none;background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);border-radius:var(--radius);padding:10px 16px;font-size:12.5px;margin-bottom:14px;"></div>
 
     <div class="settings-card">
       <div class="settings-card-header">
         <div>
           <div class="settings-card-title">Registered Employees</div>
-          <div class="settings-card-sub">Only these emails can log in to the CT Form</div>
+          <div class="settings-card-sub">Only these emails can log in · Default companies: SWS, SWG, BE</div>
         </div>
       </div>
 
@@ -884,11 +866,11 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
           <input class="settings-input" id="new-name" type="text" placeholder="Nickname">
         </div>
         <div class="form-group">
-          <label>Companies</label>
+          <label>Companies (default: SWS, SWG, BE)</label>
           <div class="co-checkboxes" id="new-co-checks">
-            <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="SWS">SWS</label>
-            <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="SWG">SWG</label>
-            <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="BE">BE</label>
+            <label class="co-checkbox-label checked" onclick="toggleCheck(this)"><input type="checkbox" value="SWS" checked>SWS</label>
+            <label class="co-checkbox-label checked" onclick="toggleCheck(this)"><input type="checkbox" value="SWG" checked>SWG</label>
+            <label class="co-checkbox-label checked" onclick="toggleCheck(this)"><input type="checkbox" value="BE" checked>BE</label>
             <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="SS">SS</label>
             <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="LOL">LOL</label>
             <label class="co-checkbox-label" onclick="toggleCheck(this)"><input type="checkbox" value="BJ">BJ</label>
@@ -902,7 +884,7 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
     </div>
 
     <div class="alert alert-info">
-      ℹ️ Changes take effect immediately. Removed employees will lose access on their next login.
+      ℹ️ Click "Save Changes" after editing. Removed employees will lose access on their next login.
     </div>
   </div>
 </div>
@@ -937,8 +919,11 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
       </div>
       <div style="text-align:right">
         <div class="detail-total-label">Total Commission</div>
-        <div class="detail-total" id="detail-total">$2,371.21</div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="downloadOne()">⬇ Download .xlsx</button>
+        <div class="detail-total" id="detail-total">$0.00</div>
+        <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="downloadOneMonth()">⬇ This Month</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadOneAll()">⬇ All Months</button>
+        </div>
       </div>
     </div>
 
@@ -954,6 +939,23 @@ input::placeholder { color:var(--ink3); font-family:'Inter',sans-serif; }
 
     <!-- Data blocks -->
     <div id="detail-data"></div>
+  </div>
+</div>
+
+<!-- DOWNLOAD MODAL -->
+<div class="modal-overlay" id="download-options-modal">
+  <div class="modal">
+    <div class="modal-title">⬇ Download Commission Data</div>
+    <div class="modal-sub">Choose what to download as .xlsx</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <button class="btn btn-ghost" style="justify-content:flex-start;padding:12px 16px" onclick="downloadAll('month'); closeModal('download-options-modal')">
+        📅 All employees — current month (<span id="dl-month-label">Mar 2026</span>)
+      </button>
+      <button class="btn btn-ghost" style="justify-content:flex-start;padding:12px 16px" onclick="downloadAll('year'); closeModal('download-options-modal')">
+        📆 All employees — entire year (2026)
+      </button>
+    </div>
+    <button class="modal-close" onclick="closeModal('download-options-modal')">Cancel</button>
   </div>
 </div>
 
@@ -986,7 +988,7 @@ const ADMIN_EMAIL = '1000tradesperday@gmail.com';
 // DATA
 // ══════════════════════════════════════════
 const CATEGORIES = [
-  { id:'New Sales',         icon:'💰', rule:'5% of revenue · max 2 pax · min 50% deposit', hasPct:true },
+  { id:'New Sales',         icon:'💰', rule:'Normal: 5% of revenue · AD deal: $250 fixed · max 2 pax · min 50% deposit', hasPct:'mixed' },
   { id:'RSVP',              icon:'📋', rule:'1% for RSVP', hasPct:true },
   { id:'UpSales',           icon:'📈', rule:'5% of revenue · max 2 pax share', hasPct:true },
   { id:'Selection Fitting', icon:'👗', rule:'PWS $20 · AD $30 · 1st fitting only', hasPct:false },
@@ -1090,7 +1092,7 @@ function enterEmployee() {
 
 function enterAdmin() {
   showPage('page-admin');
-  renderSettings();
+  loadSettingsFromSheet();
   loadAdminDashboard();
 }
 
@@ -1138,17 +1140,17 @@ function mfSwitch(el, month) {
   el.classList.add('active');
 }
 function openDetail(name) {
+  const emp = settingsEmps.find(e => e.name === name) || { name, email:'', cos:['SWS','SWG','BE'] };
+  currentDetailEmp = emp;
+  currentDetailMonth = empMonth;
+
   document.getElementById('detail-name').textContent = name;
   document.getElementById('detail-avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2);
-  document.getElementById('detail-meta').textContent = name + ' · Mar 2026';
-
-  // Co tags
-  const emp = Object.values(EMPLOYEES).find(e => e.name === name) || { cos:['SWS','SWG','BE'] };
+  document.getElementById('detail-meta').textContent = (emp.email||'') + ' · ' + empMonth + ' ' + empYear;
   document.getElementById('detail-co-tags').innerHTML =
-    emp.cos.map(c => `<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
+    (emp.cos||['SWS','SWG','BE']).map(c => `<span class="co-tag tag-${c.toLowerCase()}">${c}</span>`).join('');
 
-  // Co tabs + data
-  renderDetailCo(emp.cos, emp.cos[0]);
+  renderDetailCo(emp.cos||['SWS','SWG','BE'], (emp.cos||['SWS'])[0]);
   showPage('page-detail');
 }
 function backToDashboard() { showPage('page-admin'); }
@@ -1233,6 +1235,14 @@ function downloadAll()  { alert('Will download .xlsx for all submitted employees
 // ══════════════════════════════════════════
 async function loadFromSheet() {
   showSaveStatus('loading');
+  
+  // First load imported historical data
+  const imported = IMPORTED_DATA[currentUser.email];
+  if (imported) {
+    empState = JSON.parse(JSON.stringify(imported)); // deep copy
+  }
+  
+  // Then overlay with any newer data from Google Sheet
   try {
     const result = await apiCall({
       action: 'loadData',
@@ -1240,13 +1250,19 @@ async function loadFromSheet() {
       month: empMonth,
       year: empYear
     });
-    if (result.data) {
+    if (result.data && Object.keys(result.data).length > 0) {
       if (!empState[empYear]) empState[empYear] = {};
       empState[empYear][empMonth] = result.data;
     }
   } catch(e) {
-    // fallback to localStorage
-    try { empState = JSON.parse(localStorage.getItem('pf_ct_'+currentUser.email)||'{}'); } catch(e2){}
+    // fallback: also check localStorage
+    try {
+      const local = JSON.parse(localStorage.getItem('pf_ct_'+currentUser.email)||'{}');
+      if (local[empYear]?.[empMonth]) {
+        if (!empState[empYear]) empState[empYear] = {};
+        empState[empYear][empMonth] = local[empYear][empMonth];
+      }
+    } catch(e2){}
   }
   showSaveStatus('saved');
   renderEmp();
@@ -1394,7 +1410,13 @@ function renderEmp() {
       <div class="cat-body" id="cbody-${cat.id}">
         <div class="col-head ${layout}">${colHead}</div>
         <div id="crows-${cat.id}">${rowsHtml}</div>
-        <div class="add-row" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add deal</div>
+        ${cat.hasPct === 'mixed'
+          ? `<div style="display:flex;gap:0;border-top:1px dashed var(--line2)">
+               <div class="add-row" style="flex:1;border-top:none" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add Normal Deal (% comm)</div>
+               <div class="add-row" style="flex:1;border-top:none;border-left:1px dashed var(--line2);color:var(--amber)" onclick="addDeal('${cat.id}','AD')"><span style="font-size:16px;font-weight:300">+</span> Add AD Deal ($250 fixed)</div>
+             </div>`
+          : `<div class="add-row" onclick="addDeal('${cat.id}')"><span style="font-size:16px;font-weight:300">+</span> Add deal</div>`
+        }
         <div class="cat-footer">
           <span class="cat-footer-label">Total Comm</span>
           <span class="cat-footer-val" id="cfoot-${cat.id}">$${total.toFixed(2)}</span>
@@ -1411,9 +1433,16 @@ function renderEmp() {
 }
 
 function buildRow(cat, d, i, layout) {
-  const comm = cat.hasPct ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100 : (parseFloat(d.comm)||0);
-  if (cat.hasPct) {
-    return `<div class="deal-row ${layout}">
+  const isAD = d.dealType === 'AD';
+  const hasPct = cat.hasPct === true || (cat.hasPct === 'mixed' && !isAD);
+  const comm = hasPct
+    ? (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100
+    : (parseFloat(d.comm)||0);
+
+  const layoutClass = hasPct ? 'layout-pct' : 'layout-nopct';
+
+  if (hasPct) {
+    return `<div class="deal-row ${layoutClass}">
       <div class="row-n">${i+1}</div>
       <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
       <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
@@ -1422,8 +1451,19 @@ function buildRow(cat, d, i, layout) {
       <div class="comm-auto${comm===0?' zero':''}" id="cauto-${cat.id}-${i}">$${comm.toFixed(2)}</div>
       <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
     </div>`;
+  } else if (isAD) {
+    // AD deal: fixed $250, no % column, comm is fixed
+    const adComm = parseFloat(d.comm)||250;
+    return `<div class="deal-row layout-nopct" style="background:var(--amber-bg)">
+      <div class="row-n" style="background:var(--amber-bg);color:var(--amber);font-weight:600">AD</div>
+      <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
+      <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
+      <input type="number" value="${d.amount||''}" placeholder="Contract Amt" min="0" step="0.01" oninput="setField('${cat.id}',${i},'amount',this.value)">
+      <div class="comm-auto" style="background:var(--amber-bg);border-color:#fde68a;color:var(--amber)">$${adComm.toFixed(2)}</div>
+      <button class="del-btn" onclick="delDeal('${cat.id}',${i})">×</button>
+    </div>`;
   } else {
-    return `<div class="deal-row ${layout}">
+    return `<div class="deal-row ${layoutClass}">
       <div class="row-n">${i+1}</div>
       <input type="text" value="${d.invoice||''}" placeholder="Invoice No." oninput="setField('${cat.id}',${i},'invoice',this.value)">
       <input type="date" value="${d.date||''}" oninput="setField('${cat.id}',${i},'date',this.value)">
@@ -1446,8 +1486,13 @@ function empSwitchCo(el, co) {
   empCo = co;
   renderEmp();
 }
-function addDeal(catId) {
-  getDeals(empCo, catId).push({ invoice:'', date:'', amount:'', pct:'', comm:'' });
+function addDeal(catId, dealType) {
+  const newDeal = { invoice:'', date:'', amount:'', pct:'', comm:'' };
+  if (dealType === 'AD') {
+    newDeal.dealType = 'AD';
+    newDeal.comm = '250';
+  }
+  getDeals(empCo, catId).push(newDeal);
   scheduleSave();
   renderEmp();
   setTimeout(() => {
@@ -1460,6 +1505,16 @@ function addDeal(catId) {
     if (rows.length) { const inp = rows[rows.length-1].querySelector('input'); if(inp) inp.focus(); }
   }, 30);
 }
+
+function calcTotal(deals, hasPct) {
+  return deals.reduce((s,d) => {
+    if (d.dealType === 'AD') return s + (parseFloat(d.comm)||250);
+    if (hasPct === true || hasPct === 'mixed') {
+      return s + (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100;
+    }
+    return s + (parseFloat(d.comm)||0);
+  }, 0);
+}
 function delDeal(catId, idx) {
   getDeals(empCo, catId).splice(idx,1);
   scheduleSave();
@@ -1471,6 +1526,7 @@ function setField(catId, idx, field, val) {
 }
 function recalc(catId, idx) {
   const d = getDeals(empCo, catId)[idx];
+  if (d.dealType === 'AD') return; // AD deals have fixed comm
   const comm = (parseFloat(d.amount)||0)*(parseFloat(d.pct)||0)/100;
   const el = document.getElementById(`cauto-${catId}-${idx}`);
   if (el) { el.textContent = '$'+comm.toFixed(2); el.classList.toggle('zero', comm===0); }
@@ -1547,36 +1603,92 @@ function renderAdminDashboard(data) {
   if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = '$'+grandTotal.toFixed(2);
 }
 
-function downloadAll() {
+function downloadAll(scope) {
   if (!adminData.length) { alert('No submitted data yet.'); return; }
-  const rows = [['Timestamp','Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
-  adminData.forEach(d => rows.push([d.ts,d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
+  let filtered = adminData;
+  let filename = `PF_Commission_All_2026.xlsx`;
+  if (scope === 'month') {
+    filtered = adminData.filter(d => d.month === empMonth);
+    filename = `PF_Commission_${empMonth}${empYear}.xlsx`;
+  }
+  if (!filtered.length) { alert('No data for selected period.'); return; }
+  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
+  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
   const ws = XLSX.utils.aoa_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
-  XLSX.writeFile(wb, `PF_Commission_${empMonth}${empYear}.xlsx`);
+  XLSX.writeFile(wb, filename);
 }
 
-function downloadOne() {
-  const name = document.getElementById('detail-name').textContent;
-  const filtered = adminData.filter(d => d.name === name);
-  if (!filtered.length) { alert('No data for this employee.'); return; }
-  const rows = [['Timestamp','Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
-  filtered.forEach(d => rows.push([d.ts,d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
+function showDownloadModal() {
+  document.getElementById('dl-month-label').textContent = empMonth + ' ' + empYear;
+  document.getElementById('download-options-modal').classList.add('open');
+}
+
+let currentDetailEmp = null;
+let currentDetailMonth = 'Mar';
+
+function downloadOneMonth() {
+  if (!currentDetailEmp) return;
+  const filtered = adminData.filter(d => d.name === currentDetailEmp.name && d.month === currentDetailMonth);
+  if (!filtered.length) { alert('No data for this employee this month.'); return; }
+  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
+  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
   const ws = XLSX.utils.aoa_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, name);
-  XLSX.writeFile(wb, `${name.replace(' ','_')}_CT_${empMonth}${empYear}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, currentDetailMonth);
+  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(' ','_')}_CT_${currentDetailMonth}${empYear}.xlsx`);
 }
+
+function downloadOneAll() {
+  if (!currentDetailEmp) return;
+  const filtered = adminData.filter(d => d.name === currentDetailEmp.name);
+  if (!filtered.length) { alert('No data for this employee.'); return; }
+  const rows = [['Employee','Email','Company','Month','Year','Category','Invoice','Date','Amount','%','Comm']];
+  filtered.forEach(d => rows.push([d.name,d.email,d.company,d.month,d.year,d.category,d.invoice,d.date,d.amount,d.pct,d.comm]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, currentDetailEmp.name);
+  XLSX.writeFile(wb, `${currentDetailEmp.name.replace(' ','_')}_CT_All2026.xlsx`);
+}
+
+// ══════════════════════════════════════════
+// IMPORTED HISTORICAL DATA (Feb + Mar 2026)
+// ══════════════════════════════════════════
+const IMPORTED_DATA = {"sw999.ba@gmail.com":{"2026":{"Feb":{"SWS":{"Selection Fitting":[{"invoice":"88234","date":"2026-02-14","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"66706","date":"2026-02-26","amount":"20.0","pct":"","comm":"20.0"},{"invoice":"66776","date":"2026-02-27","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"88052","date":"2026-02-27","amount":"30.0","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"140.0"}],"Car Decor":[{"invoice":"88053","date":"2026-02-12","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66724","date":"2026-02-13","amount":"","pct":"","comm":"7.5"},{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Online Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"66690","date":"2026-03-02","amount":"","pct":"","comm":"30.0"},{"invoice":"66416","date":"2026-03-02","amount":"","pct":"","comm":"30.0"},{"invoice":"66895","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66891","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66721","date":"2026-03-22","amount":"","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"66854","date":"2026-03-20","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66869","date":"2026-03-20","amount":"","pct":"","comm":"7.5"},{"invoice":"66857","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"66707","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"67.5"}]},"BE":{"Selection Fitting":[{"invoice":"","date":"","amount":"","pct":"","comm":"30.0"}],"Car Decor":[{"invoice":"88569","date":"2026-03-20","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"88211","date":"2026-03-27","amount":"15.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"}]}}}},"sw999.sales@gmail.com":{"2026":{"Feb":{"SWS":{"Selection Fitting":[{"invoice":"66873","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66765","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66878","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"66709","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"120.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"7.5"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"5.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}]},"SWG":{"Selection Fitting":[{"invoice":"88143","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"88104","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"88228","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88016","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88212","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88506","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88302","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88227","date":"","amount":"","pct":"","comm":"30.0"},{"invoice":"88500","date":"","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"260.0"}],"Online Sales":[{"invoice":"88546","date":"","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88551","date":"","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}]}},"Mar":{"SWS":{"Selection Fitting":[{"invoice":"66846","date":"2026-03-03","amount":"","pct":"","comm":"30.0"},{"invoice":"66900","date":"2026-03-13","amount":"","pct":"","comm":"20.0"},{"invoice":"66849","date":"2026-03-16","amount":"","pct":"","comm":"20.0"},{"invoice":"66876","date":"2026-03-16","amount":"","pct":"","comm":"20.0"},{"invoice":"66911","date":"2026-03-18","amount":"","pct":"","comm":"20.0"},{"invoice":"66775","date":"2026-03-27","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"160.0"}],"Car Decor":[{"invoice":"66869","date":"2026-03-20","amount":"","pct":"","comm":"7.5"},{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]},"BE":{"Selection Fitting":[{"invoice":"88501","date":"2026-03-04","amount":"","pct":"","comm":"20.0"},{"invoice":"88182","date":"2026-03-05","amount":"","pct":"","comm":"30.0"},{"invoice":"88279","date":"2026-03-11","amount":"","pct":"","comm":"30.0"},{"invoice":"88503","date":"2026-03-12","amount":"","pct":"","comm":"20.0"},{"invoice":"88024","date":"2026-03-12","amount":"","pct":"","comm":"30.0"},{"invoice":"88151","date":"2026-03-26","amount":"","pct":"","comm":"20.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"170.0"}],"Car Decor":[{"invoice":"","date":"","amount":"","pct":"","comm":"15.0"}],"Review":[{"invoice":"","date":"","amount":"","pct":"","comm":"45.0"}],"Online Sales":[{"invoice":"88566","date":"2026-03-04","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88570","date":"2026-03-06","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88599","date":"2026-03-16","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88601","date":"2026-03-18","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88610","date":"2026-03-26","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"88612","date":"2026-03-26","amount":"69.0","pct":"","comm":"15.0"},{"invoice":"","date":"","amount":"","pct":"","comm":"105.0"}]}}}},"sw999.pg1@gmail.com":{"2026":{"Feb":{"SWS":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"183.8"}]}},"Mar":{"BE":{"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"106.9"}]}}}},"sw999.pg2@gmail.com":{"2026":{"Mar":{"SWS":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"194.4"}]},"BE":{"New Sales":[{"invoice":"","date":"","amount":"","pct":"","comm":"250.0"}],"Photo Selection":[{"invoice":"","date":"","amount":"","pct":"","comm":"22.5"}]}}}}};
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
 const ALL_COS = ['SWS','SWG','BE','SS','LOL','BJ','MB'];
-let settingsEmps = [
-  { email:'chuhong0222@gmail.com', name:'Chu Hong', cos:['SWS','SWG','BE'] },
-  { email:'pohhui1101@gmail.com',  name:'Hui Hui',  cos:['SWS','BE'] },
-  { email:'ans8680@gmail.com',     name:'Anson',    cos:['SWS','SWG'] },
-  { email:'nelson.xien2809@gmail.com', name:'Nelson', cos:['SWS','SWG','BE'] },
-  { email:'chooesyuen@gmail.com',  name:'Choo',     cos:['SWS','BE'] },
-  { email:'leeyeokmin@gmail.com',  name:'LYB',      cos:['SWS'] },
-];
+let settingsEmps = [];
+
+async function loadSettingsFromSheet() {
+  settingsEmps = [
+    { email:'sw999.ba@gmail.com',    name:'Chu Hong', cos:['SWS','SWG','BE'] },
+    { email:'sw999.sales@gmail.com', name:'Hui Hui',  cos:['SWS','SWG','BE'] },
+    { email:'sw999.pg1@gmail.com',   name:'Anson',    cos:['SWS','SWG','BE'] },
+    { email:'sw999.pg2@gmail.com',   name:'Nelson',   cos:['SWS','SWG','BE'] },
+  ];
+  renderSettings();
+}
+
+async function saveEmployees() {
+  const btn = document.querySelector('[onclick="saveEmployees()"]');
+  btn.textContent = '⏳ Saving...';
+  btn.disabled = true;
+  try {
+    await apiPost({ action:'saveEmployees', data: settingsEmps });
+    document.getElementById('settings-success').style.display = 'block';
+    document.getElementById('settings-error').style.display = 'none';
+    setTimeout(() => document.getElementById('settings-success').style.display='none', 3000);
+  } catch(e) {
+    document.getElementById('settings-error').textContent = 'Save failed. Please try again.';
+    document.getElementById('settings-error').style.display = 'block';
+  }
+  btn.textContent = '💾 Save Changes';
+  btn.disabled = false;
+}
 
 function renderSettings() {
   document.getElementById('emp-settings-list').innerHTML = settingsEmps.map((e,i) => `
@@ -1585,8 +1697,8 @@ function renderSettings() {
       <input class="settings-input" value="${e.name}" oninput="settingsEmps[${i}].name=this.value">
       <div class="co-checkboxes">
         ${ALL_COS.map(co => `
-          <label class="co-checkbox-label${e.cos.includes(co)?' checked':''}" onclick="toggleEmpCo(this,${i},'${co}')">
-            <input type="checkbox" ${e.cos.includes(co)?'checked':''}>${co}
+          <label class="co-checkbox-label${(e.cos||[]).includes(co)?' checked':''}" onclick="toggleEmpCo(this,${i},'${co}')">
+            <input type="checkbox" ${(e.cos||[]).includes(co)?'checked':''}>${co}
           </label>`).join('')}
       </div>
       <button class="btn btn-red btn-sm" onclick="removeEmp(${i})">Remove</button>
@@ -1595,6 +1707,7 @@ function renderSettings() {
 function toggleEmpCo(label, empIdx, co) {
   label.classList.toggle('checked');
   const emp = settingsEmps[empIdx];
+  if (!emp.cos) emp.cos = [];
   if (emp.cos.includes(co)) emp.cos = emp.cos.filter(c=>c!==co);
   else emp.cos.push(co);
 }
@@ -1609,10 +1722,14 @@ function addEmployee() {
   const name  = document.getElementById('new-name').value.trim();
   const cos   = [...document.querySelectorAll('#new-co-checks .co-checkbox-label.checked')].map(l=>l.textContent.trim());
   if (!email||!name) { alert('Please fill email and name'); return; }
+  if (settingsEmps.find(e=>e.email===email)) { alert('Email already exists'); return; }
   settingsEmps.push({ email, name, cos });
   document.getElementById('new-email').value='';
   document.getElementById('new-name').value='';
-  document.querySelectorAll('#new-co-checks .co-checkbox-label').forEach(l=>l.classList.remove('checked'));
+  document.querySelectorAll('#new-co-checks .co-checkbox-label').forEach(l=>{
+    const val = l.querySelector('input').value;
+    l.classList.toggle('checked', ['SWS','SWG','BE'].includes(val));
+  });
   renderSettings();
 }
 </script>
